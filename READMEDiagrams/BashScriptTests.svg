@@ -1,0 +1,72 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="stepGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#45a049;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#666;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#888;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#333">BashScriptTests.yml</text>
+  
+  <!-- Step 1: Checkout Code -->
+  <rect x="50" y="80" width="140" height="80" rx="10" fill="url(#stepGradient)" stroke="#2E7D32" stroke-width="2"/>
+  <text x="120" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Step 1</text>
+  <text x="120" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">Checkout</text>
+  <text x="120" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">Code</text>
+  <text x="120" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">📋</text>
+  
+  <!-- Arrow 1 -->
+  <path d="M 190 120 L 230 120" stroke="url(#arrowGradient)" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 2: Install Node.js -->
+  <rect x="240" y="80" width="140" height="80" rx="10" fill="url(#stepGradient)" stroke="#2E7D32" stroke-width="2"/>
+  <text x="310" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Step 2</text>
+  <text x="310" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">Install</text>
+  <text x="310" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">Node.js</text>
+  <text x="310" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">⚡</text>
+  
+  <!-- Arrow 2 -->
+  <path d="M 380 120 L 420 120" stroke="url(#arrowGradient)" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 3: Install Bats -->
+  <rect x="430" y="80" width="140" height="80" rx="10" fill="url(#stepGradient)" stroke="#2E7D32" stroke-width="2"/>
+  <text x="500" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Step 3</text>
+  <text x="500" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">Install</text>
+  <text x="500" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">Bats</text>
+  <text x="500" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">🔧</text>
+  
+  <!-- Arrow 3 -->
+  <path d="M 570 120 L 610 120" stroke="url(#arrowGradient)" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Step 4: Run Bats Version -->
+  <rect x="620" y="80" width="140" height="80" rx="10" fill="url(#stepGradient)" stroke="#2E7D32" stroke-width="2"/>
+  <text x="690" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">Step 4</text>
+  <text x="690" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">Run</text>
+  <text x="690" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="white">bats -v</text>
+  <text x="690" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="white">✅</text>
+  
+  <!-- Detailed descriptions -->
+  <text x="50" y="200" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#333">Workflow Steps:</text>
+  
+  <text x="50" y="230" font-family="Arial, sans-serif" font-size="12" fill="#555">1. Checks out the pushed code</text>
+  <text x="50" y="250" font-family="Arial, sans-serif" font-size="12" fill="#555">2. Installs Node.js runtime environment</text>
+  <text x="50" y="270" font-family="Arial, sans-serif" font-size="12" fill="#555">3. Installs the Bash Automated Testing System (Bats) framework</text>
+  <text x="50" y="290" font-family="Arial, sans-serif" font-size="12" fill="#555">4. Runs command to output Bats version: </text>
+  <rect x="270" y="275" width="80" height="20" rx="3" fill="#f5f5f5" stroke="#ddd"/>
+  <text x="310" y="288" text-anchor="middle" font-family="Monaco, monospace" font-size="11" fill="#333">bats -v</text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
+  </defs>
+  
+  <!-- Footer -->
+  <text x="400" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#999">GitHub Action Workflow Overview</text>
+</svg>
