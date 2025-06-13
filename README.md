@@ -1,6 +1,6 @@
 # myGitActions
 
-#**🛠 GitHub Actions Workflow:** BashScriptTests.yml  
+## **🛠 GitHub Actions Workflow:** BashScriptTests.yml  
 
 This repository includes a GitHub Actions workflow defined in **.github/workflows/BashScriptTests.yml.** Note: This workflow runs on every push to test with Bats.  
 
@@ -15,4 +15,5 @@ Purpose: Installs the Bash Automated Testing System (Bats) and displays its vers
 - **Verify Bats Installation** – Runs bats -v to confirm the version.
 
 The workflow diagram:
-![Uploading image.png…]()
+![Workflow Diagram](READMEDiagrams/BashScriptTests.svg)
+
