@@ -1,0 +1,29 @@
+warning: in the working copy of '.github/workflows/BashScriptTests.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.github/workflows/prettier.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.github/workflows/superlinter.yml', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.github/workflows/BashScriptTests.yml b/.github/workflows/BashScriptTests.yml[m
+[1mindex f1762c3..6e80855 100644[m
+[1m--- a/.github/workflows/BashScriptTests.yml[m
+[1m+++ b/.github/workflows/BashScriptTests.yml[m
+[36m@@ -16,7 +16,7 @@[m [mjobs:[m
+ [m
+       - uses: actions/setup-node@v4[m
+         with:[m
+[31m-          node-version: '20'[m
+[32m+[m[32m          node-version: "20"[m
+ [m
+       - run: npm install -g bats[m
+ [m
+[1mdiff --git a/.github/workflows/prettier.yml b/.github/workflows/prettier.yml[m
+[1mindex 53225e7..d1d7163 100644[m
+[1m--- a/.github/workflows/prettier.yml[m
+[1m+++ b/.github/workflows/prettier.yml[m
+[36m@@ -20,7 +20,7 @@[m [mjobs:[m
+       - name: Setup Node.js[m
+         uses: actions/setup-node@v4[m
+         with:[m
+[31m-          node-version: '20'[m
+[32m+[m[32m          node-version: "20"[m
+ [m
+       - name: Install Prettier[m
+         run: npm install --global prettier[m
