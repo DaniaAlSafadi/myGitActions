@@ -3,6 +3,9 @@ name: Greeting on variable day
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read  
+
 env:
   DAY_OF_WEEK: Monday
 
