@@ -16,7 +16,7 @@ Uses DEFAULT_BRANCH: main to identify the base branch.
 Uses the repository’s GITHUB_TOKEN to authenticate.  
 - **Upload Super-Linter Artifact** – If the workflow completes (even on failure), uploads linting results to GitHub using actions/upload-artifact@v4.    
 
-### The workflow diagram: 
+### The workflow diagram 
 ![Super-Linter Diagram](READMEDiagrams/SuperLinter.svg)  
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -35,6 +35,6 @@ Purpose: Installs the Bash Automated Testing System (Bats) and displays its vers
 - **Install Bats** – Installs the Bats testing framework globally using npm.
 - **Verify Bats Installation** – Runs bats -v to confirm the version.
 
-### The workflow diagram:
+### The workflow diagram
 ![Workflow Diagram](READMEDiagrams/BashScriptTests.svg)
 
