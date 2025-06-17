@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
+      - 'library/books.json'
       
 permissions:
   contents: read
