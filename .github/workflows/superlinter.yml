@@ -2,7 +2,9 @@ name: Super-Linter
 
 on:
   push:
-
+    paths:
+      - '.github/workflows/superlinter.yml'
+      
 permissions:
   contents: read
   statuses: write
