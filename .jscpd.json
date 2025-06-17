@@ -1,4 +1,4 @@
 {
   "threshold": 10,
-  "exclude": ["**/*.svg"]
+  "exclude": ["**/*.svg", "**/READMEDiagrams/**"]
 }
