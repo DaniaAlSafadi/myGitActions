@@ -1,2 +1,2 @@
 # ReadMeDiagrams
-📁 Note: This folder contains all workflow diagrams referenced in the project README.
+📁 Note: This folder contains all workflow diagrams referenced in the project readme.
