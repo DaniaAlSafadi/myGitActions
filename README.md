@@ -5,7 +5,7 @@
 
 This repository also includes a GitHub Actions workflow defined in **.github/workflows/SuperLinter.yml.** This workflow runs on every push and uses GitHub’s official Super-Linter to check code quality and formatting.  
 
-Workflow Name: Lint code base
+Workflow Name: Lint codebase
 Trigger: On every push
 Purpose: Automatically lints the codebase using the Super-Linter to enforce consistent code standards.  
 
