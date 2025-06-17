@@ -4,7 +4,7 @@
     "location": "Downtown",
     "books": [
       {
-        "title": "Invisible Cities"
+        "title": "Invisible Cities",
         "author": "Italo Calvino",
         "year": 1972,
         "available": true
