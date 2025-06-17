@@ -22,7 +22,8 @@ jobs:
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JSCPD_CONFIG_FILE: .jscpd.json
+          JSCPD_THRESHOLD: 10                 
+          JSCPD_EXCLUDE: "**/*.svg,READMEDiagrams/**" 
           MARKDOWN_LINT_CONFIG_FILE: .markdownlint.json
 
       - name: Upload Super-Linter Artifact
