@@ -14,9 +14,9 @@ Purpose: Automatically lints the codebase using the Super-Linter to enforce cons
 - **Run Super-Linter** – Executes the Super-Linter action from super-linter/super-linter@v7.1.0.  
 Uses DEFAULT_BRANCH: main to identify the base branch.  
 Uses the repository’s GITHUB_TOKEN to authenticate.  
-- **Upload Super-Linter Artifact** – If the workflow completes (even on failure), uploads linting results to GitHub using actions/upload-artifact@v4.    
+- **Upload Super-Linter Artifact** – If the workflow completes (even on failure), uploads linting results to GitHub using actions/upload-artifact@v4.
 
-### The workflow diagram 
+### The workflow diagram
 ![Super-Linter Diagram](READMEDiagrams/SuperLinter.svg)  
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
