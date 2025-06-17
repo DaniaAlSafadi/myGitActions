@@ -1,0 +1,26 @@
+{
+  "library": {
+    "name": "City Library",
+    "location": "Downtown",
+    "books": [
+      {
+        "title": "Invisible Cities"
+        "author": "Italo Calvino",
+        "year": 1972,
+        "available": true
+      },
+      {
+        "title": "The Name of the Wind",
+        "author": "Patrick Rothfuss",
+        "year": 2007,
+        "available": false
+      },
+      {
+        "title": "Sapiens: A Brief History of Humankind",
+        "author": "Yuval Noah Harari",
+        "year": 2011,
+        "available": true
+      }
+    ]
+  }
+}
