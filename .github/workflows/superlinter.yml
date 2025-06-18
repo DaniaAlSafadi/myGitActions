@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
+      - 'mini-projects/API-Build/**'
       
 permissions:
   contents: read
