@@ -1,10 +1,16 @@
 name: Super-Linter
+
 on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
   workflow_dispatch:
+    inputs:
+      source_repo:
+        description: 'Source repository to checkout'
+        required: false
+        default: 'DaniaAlSafadi/mini-projects'
 
 jobs:
   super-lint:
@@ -12,14 +18,15 @@ jobs:
     steps:
       - name: Checkout myGitActions repo
         uses: actions/checkout@v3
-        
-      - name: Checkout mini-projects repo
+
+      - name: Checkout mini-projects repo (for cross-repo triggers)
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v3
         with:
-          repository: DaniaAlSafadi/mini-projects
+          repository: ${{ github.event.inputs.source_repo || 'DaniaAlSafadi/mini-projects' }}
           path: mini-projects
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          
+
       - name: Run Super-Linter
         uses: super-linter/super-linter@v7.1.0
         env:
@@ -28,5 +35,5 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_ES: true
           VALIDATE_JSON: true
-          # Lint specific file patterns
-          FILTER_REGEX_INCLUDE: '.*(\.github/workflows/superlinter\.yml|library/books\.json|mini-projects/API-Build/.*).*'
+          FILTER_REGEX_INCLUDE: '.*(mini-projects/API-Build/.*|\.github/workflows/superlinter\.yml|library/books\.json).*'
+
