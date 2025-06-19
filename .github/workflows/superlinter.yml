@@ -27,9 +27,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_JSCPD: false
-          VALIDATE_MARKDOWN_PRETTIER: false
-          VALIDATE_YAML_PRETTIER: false
+         # VALIDATE_JSCPD: false
+         # VALIDATE_MARKDOWN_PRETTIER: false
+        # VALIDATE_YAML_PRETTIER: false
           MARKDOWN_LINT_CONFIG_FILE: .markdownlint.json
 
       - name: Upload Super-Linter Artifact
