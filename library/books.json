@@ -1,7 +1,7 @@
 {
   "library": {
     "name": "City Library",
-    "location": "Downtown"
+    "location": "Downtown",
     "books": [
       {
         "title": "Invisible Cities",
