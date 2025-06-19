@@ -1,23 +1,25 @@
 name: Super-Linter
-
 on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
-
-permissions:
-  contents: read
-  statuses: write
+  workflow_dispatch:
 
 jobs:
   super-lint:
-    name: Lint code base
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout myGitActions repo
         uses: actions/checkout@v3
-
+        
+      - name: Checkout mini-projects repo
+        uses: actions/checkout@v3
+        with:
+          repository: DaniaAlSafadi/mini-projects
+          path: mini-projects
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          
       - name: Run Super-Linter
         uses: super-linter/super-linter@v7.1.0
         env:
@@ -26,11 +28,5 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_ES: true
           VALIDATE_JSON: true
-          MARKDOWN_LINT_CONFIG_FILE: .markdownlint.json
-
-      - name: Upload Super-Linter Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: super-linter-output
-          path: super-linter-output/
+          # Lint specific file patterns
+          FILTER_REGEX_INCLUDE: '.*(\.github/workflows/superlinter\.yml|library/books\.json|mini-projects/API-Build/.*).*'
