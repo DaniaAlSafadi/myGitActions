@@ -27,6 +27,9 @@ jobs:
           path: mini-projects
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
+      - name: List files checked out
+        run: find . -type f
+
       - name: Run Super-Linter
         uses: super-linter/super-linter@v7.1.0
         env:
@@ -35,5 +38,5 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_ES: true
           VALIDATE_JSON: true
-          FILTER_REGEX_INCLUDE: '.*(mini-projects/API-Build/.*|\.github/workflows/superlinter\.yml|library/books\.json).*'
+          FILTER_REGEX_INCLUDE: '.*(\.js|\.json|\.py|\.yml)$'
 
