@@ -1,25 +1,31 @@
 name: Super-Linter
-
 on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
-      - 'mini-projects/API-Build/**'
   workflow_dispatch:
-      
-permissions:
-  contents: read
-  statuses: write
+    inputs:
+      source_repo:
+        description: 'Source repository to checkout'
+        required: false
+        default: 'DaniaAlSafadi/mini-projects'
 
 jobs:
   super-lint:
-    name: Lint code base
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout myGitActions repo
         uses: actions/checkout@v3
-
+        
+      - name: Checkout mini-projects repo (for cross-repo triggers)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.event.inputs.source_repo || 'DaniaAlSafadi/mini-projects' }}
+          path: mini-projects
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          
       - name: Run Super-Linter
         uses: super-linter/super-linter@v7.1.0
         env:
@@ -27,14 +33,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_ES: true
-         # VALIDATE_JSCPD: false
-         # VALIDATE_MARKDOWN_PRETTIER: false
-        # VALIDATE_YAML_PRETTIER: false
-          MARKDOWN_LINT_CONFIG_FILE: .markdownlint.json
-
-      - name: Upload Super-Linter Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: super-linter-output
-          path: super-linter-output/
+          # Include specific paths based on trigger type
+          FILTER_REGEX_INCLUDE: ${{ github.event_name == 'workflow_dispatch' && '.*mini-projects/API-Build/.*' || '.*(\.github/workflows/superlinter\.yml|library/books\.json).*' }}
