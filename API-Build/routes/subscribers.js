@@ -1,6 +1,10 @@
+const unusedVar = 42
 const express = require ('express')
 const router = express.Router()
 const Subscriber = require('../models/subscriber')
+
+consol.log("Oops"); // typo: should be console.log
+
 
 // Getting all
 router.get('/', async (req, res) => {
