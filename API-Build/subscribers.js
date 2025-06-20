@@ -1,4 +1,4 @@
-const unusedVar = 42
+const unusedVar = 43
 const express = require ('express')
 const router = express.Router()
 const Subscriber = require('../models/subscriber')
