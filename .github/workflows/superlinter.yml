@@ -5,7 +5,7 @@ on:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
-      - 'API-Build/subscribers.js'
+      - 'API-Build/routes/subscribers.js'
 
 jobs:
   super-lint:
