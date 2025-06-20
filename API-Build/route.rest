@@ -1,0 +1,29 @@
+GET http://localhost:3000/subscribers 
+
+###
+
+GET http://localhost:3000/subscribers/68513985dd8ded2e71c4687b
+
+###
+
+POST http://localhost:3000/subscribers
+Content-Type: application/json
+
+{
+    "name": "Data Queen",
+    "subscribedToChannel": "StatQuest with Josh Starmer"
+}
+
+
+###
+
+DELETE http://localhost:3000/subscribers/68513985dd8ded2e71c4687b
+
+###
+
+PATCH http://localhost:3000/subscribers/67c668f688b1deb9d87fd7af
+Content-Type: application/json
+
+{
+    "name" : "New Person"
+}
