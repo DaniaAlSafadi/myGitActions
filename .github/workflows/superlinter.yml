@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
-      - 'library/books.json'
+      - 'mini-projects/API-Build/**'
   workflow_dispatch:
     inputs:
       source_repo:
@@ -16,10 +16,10 @@ jobs:
   super-lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout myGitActions repo
+      - name: Checkout main repo (optional if only remote repo is needed)
         uses: actions/checkout@v3
 
-      - name: Checkout mini-projects repo (for cross-repo triggers)
+      - name: Checkout mini-projects repo
         if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v3
         with:
@@ -30,14 +30,13 @@ jobs:
       - name: List files checked out
         run: find . -type f
 
-      - name: Run Super-Linter
+      - name: Run Super-Linter on mini-projects/API-Build
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          #VALIDATE_PYTHON: true
-          #VALIDATE_JAVASCRIPT_ES: true
-          #VALIDATE_JSON: true
+          WORKSPACE: ./mini-projects/API-Build
           VALIDATE_ALL_CODEBASE: true
-          WORKSPACE: ./mini-projects
-
+          VALIDATE_JSON: true
+          VALIDATE_PYTHON: true
+          VALIDATE_JAVASCRIPT_ES: true
