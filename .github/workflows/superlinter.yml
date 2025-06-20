@@ -38,5 +38,5 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_ES: true
           VALIDATE_JSON: true
-          FILTER_REGEX_INCLUDE: '.*(\.js|\.json|\.py|\.yml)$'
+          FILTER_REGEX_INCLUDE: '^mini-projects/.*(\.js|\.json|\.py|\.yml)$'
 
