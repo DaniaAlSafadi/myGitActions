@@ -35,8 +35,9 @@ jobs:
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_PYTHON: true
-          VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_JSON: true
-          FILTER_REGEX_INCLUDE: '^mini-projects/.*(\.js|\.json|\.py|\.yml)$'
+          #VALIDATE_PYTHON: true
+          #VALIDATE_JAVASCRIPT_ES: true
+          #VALIDATE_JSON: true
+          VALIDATE_ALL_CODEBASE: true
+          WORKSPACE: ./mini-projects
 
