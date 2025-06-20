@@ -5,13 +5,7 @@ on:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
-      - 'mini-projects/API-Build/**'
-  workflow_dispatch:
-    inputs:
-      source_repo:
-        description: 'Source repository to checkout'
-        required: false
-        default: 'DaniaAlSafadi/mini-projects'
+      - 'API-Build/subscribers.js'
 
 jobs:
   super-lint:
@@ -19,14 +13,6 @@ jobs:
     steps:
       - name: Checkout main repo (optional if only remote repo is needed)
         uses: actions/checkout@v3
-
-      - name: Checkout mini-projects repo
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ github.event.inputs.source_repo || 'DaniaAlSafadi/mini-projects' }}
-          path: mini-projects
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: List files checked out
         run: find . -type f
@@ -36,7 +22,6 @@ jobs:
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WORKSPACE: ./mini-projects/API-Build
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
