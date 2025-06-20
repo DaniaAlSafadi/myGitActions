@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
+      - 'library/books.json'
       - 'mini-projects/API-Build/**'
   workflow_dispatch:
     inputs:
