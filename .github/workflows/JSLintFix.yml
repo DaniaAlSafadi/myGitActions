@@ -1,0 +1,38 @@
+name: JS Lint Auto-Fix (Manual Approval)
+
+on:
+  workflow_dispatch:  # Manually triggered
+
+jobs:
+  lint-and-fix:
+    runs-on: ubuntu-latest
+    environment:
+      name: lint-approval
+      url: https://github.com/${{ github.repository }}/actions
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          cd API-Build
+          npm install
+
+      - name: Lint and auto-fix all JS files in API-Build
+        run: |
+          cd API-Build
+          npx standard --fix "./**/*.js"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "chore: auto-fix JS via GitHub Actions"
+          git push
