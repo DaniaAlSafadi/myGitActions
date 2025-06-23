@@ -17,7 +17,7 @@ jobs:
       - name: List files checked out
         run: find . -type f
 
-      - name: Run Super-Linter on mini-projects/API-Build
+      - name: Run Super-Linter on myGitActions/API-Build
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
