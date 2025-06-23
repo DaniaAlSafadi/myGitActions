@@ -3,6 +3,9 @@ name: JS Lint Auto-Fix (Manual Approval)
 on:
   workflow_dispatch:  # Manually triggered
 
+permissions:
+  contents: write
+
 jobs:
   lint-and-fix:
     runs-on: ubuntu-latest
@@ -32,6 +35,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git diff --cached --quiet || git commit -m "chore: auto-fix JS via GitHub Actions"
-          git push
+          git add API-Build
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-fix JS via GitHub Actions"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          else
+            echo "No changes to commit."
+          fi
