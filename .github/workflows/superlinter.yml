@@ -31,8 +31,8 @@ jobs:
         if: always()
         run: |
           echo "===== Super-Linter Summary ====="
-          if [ -f super-linter.report/lint-results.log ]; then
-            cat super-linter.report/lint-results.log
+          if [ -f super-linter-output/lint-results.log ]; then
+            cat super-linter-output/lint-results.log
           else
             echo "No summary report found."
           fi
@@ -43,4 +43,5 @@ jobs:
         with:
           name: super-linter-output
           path: super-linter-output/
+
           
