@@ -1,0 +1,6 @@
+exclude:
+  - '**'                  # Exclude everything by default
+include:
+  - '.github/workflows/superlinter.yml'
+  - 'library/books.json'
+  - 'API-Build/routes/subscribers.js'
