@@ -27,14 +27,13 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
 
-      - name: Display Super-Linter Summary
+      - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
-          echo "===== Super-Linter Summary ====="
-          if [ -f super-linter-output/lint-results.log ]; then
-            cat super-linter-output/lint-results.log
+          if [ -f super-linter-output/super-linter-summary.md ]; then
+            cat super-linter-output/super-linter-summary.md >> $GITHUB_STEP_SUMMARY
           else
-            echo "No summary report found."
+            echo "No super-linter summary found." >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Upload Super-Linter Artifact
@@ -42,6 +41,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
-          path: super-linter-output/
-
-          
+          path: super-linter-output/ 
