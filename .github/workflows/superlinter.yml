@@ -26,4 +26,21 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
+
+      - name: Display Super-Linter Summary
+        if: always()
+        run: |
+          echo "===== Super-Linter Summary ====="
+          if [ -f super-linter.report/lint-results.log ]; then
+            cat super-linter.report/lint-results.log
+          else
+            echo "No summary report found."
+          fi
+
+      - name: Upload Super-Linter Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-linter-output
+          path: super-linter.report/
           
