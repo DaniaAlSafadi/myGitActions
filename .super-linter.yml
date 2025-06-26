@@ -1,7 +1,9 @@
-exclude:
-  - '**'                  # Exclude everything by default
-  
-include:
+github_step_summary: false  # disable default GitHub summary
+
+exclude_paths:
+  - '**'  # exclude everything by default
+
+include_paths:
   - '.github/workflows/superlinter.yml'
   - 'library/books.json'
   - 'API-Build/routes/subscribers.js'
