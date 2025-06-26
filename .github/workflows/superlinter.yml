@@ -31,7 +31,7 @@ jobs:
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
-          echo "### Code Style Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### Code Style Check Summary" > $GITHUB_STEP_SUMMARY
           echo "This workflow checks code formatting for the following languages:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Python" >> $GITHUB_STEP_SUMMARY
