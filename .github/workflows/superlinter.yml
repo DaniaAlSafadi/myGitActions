@@ -26,10 +26,7 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          INPUT_INCLUDE: |
-            .github/workflows/superlinter.yml
-            library/books.json
-            API-Build/routes/subscribers.js
+          FILTER_REGEX_INCLUDE: '^(library/books\.json|API-Build/routes/subscribers\.js)$'
 
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
