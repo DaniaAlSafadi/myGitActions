@@ -24,20 +24,21 @@ jobs:
       - name: Run Super-Linter on myGitActions/API-Build
         uses: super-linter/super-linter@v7.1.0
         env:
+          LOG_LEVEL: DEBUG
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
 
-      - name: Debug Super-Linter output
+      - name: Print Super-Linter Summary File to Logs
         if: always()
         run: |
-          if [ -f super-linter.report/lint-results.log ]; then
-            echo "===== Linter Output ====="
-            cat super-linter.report/lint-results.log
+          if [ -f super-linter-output/super-linter-summary.md ]; then
+            echo "===== Super-Linter Summary Output ====="
+            cat super-linter-output/super-linter-summary.md
           else
-            echo "Linter report file not found."
+            echo "Super-Linter summary not found."
           fi
 
       - name: Add Super-Linter Summary to GitHub UI
