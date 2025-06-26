@@ -30,6 +30,16 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
 
+      - name: Debug Super-Linter output
+        if: always()
+        run: |
+          if [ -f super-linter.report/lint-results.log ]; then
+            echo "===== Linter Output ====="
+            cat super-linter.report/lint-results.log
+          else
+            echo "Linter report file not found."
+          fi
+
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
