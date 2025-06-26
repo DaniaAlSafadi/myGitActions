@@ -31,16 +31,6 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
 
-      - name: Print Super-Linter Summary File to Logs
-        if: always()
-        run: |
-          if [ -f super-linter-output/super-linter-summary.md ]; then
-            echo "===== Super-Linter Summary Output ====="
-            cat super-linter-output/super-linter-summary.md
-          else
-            echo "Super-Linter summary not found."
-          fi
-
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
@@ -57,6 +47,14 @@ jobs:
           else
             echo "No super-linter summary found." >> $GITHUB_STEP_SUMMARY
           fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files Potentially Linted" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          find . -type f \
+            \( -name "*.js" -o -name "*.json" -o -name "*.py" \) \
+            ! -path "./node_modules/*" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Super-Linter Artifact
         if: always()
