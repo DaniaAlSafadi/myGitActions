@@ -17,6 +17,10 @@ jobs:
       - name: List files checked out
         run: find . -type f
 
+      - name: Create Super-Linter config to disable default summary
+        run: |
+          echo "github_step_summary: false" > .super-linter.yml
+
       - name: Run Super-Linter on myGitActions/API-Build
         uses: super-linter/super-linter@v7.1.0
         env:
@@ -29,6 +33,14 @@ jobs:
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
+          echo "### Code Style Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "This workflow checks code formatting for the following languages:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Python" >> $GITHUB_STEP_SUMMARY
+          echo "- JavaScript" >> $GITHUB_STEP_SUMMARY
+          echo "- JSON" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
           if [ -f super-linter-output/super-linter-summary.md ]; then
             cat super-linter-output/super-linter-summary.md >> $GITHUB_STEP_SUMMARY
           else
@@ -40,4 +52,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
-          path: super-linter-output/ 
+          path: super-linter-output/
