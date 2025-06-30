@@ -25,7 +25,7 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          VALIDATE_ALL_CODEBASE: false
+     #     VALIDATE_ALL_CODEBASE: false
 
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
