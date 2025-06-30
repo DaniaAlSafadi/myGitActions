@@ -20,38 +20,38 @@ jobs:
       - name: Run Super-Linter on myGitActions/API-Build
         uses: super-linter/super-linter@v7.1.0
         env:
-          LOG_LEVEL: DEBUG
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
+          OUTPUT_DETAILS: detailed
           FILTER_REGEX_INCLUDE: '^(library/books\.json|API-Build/routes/subscribers\.js)$'
 
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
-          echo "### Code Style Check Summary" > $GITHUB_STEP_SUMMARY
-          echo "This workflow checks code formatting for the following languages:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Python" >> $GITHUB_STEP_SUMMARY
-          echo "- JavaScript" >> $GITHUB_STEP_SUMMARY
-          echo "- JSON" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -f super-linter-output/super-linter-summary.md ]; then
-            cat super-linter-output/super-linter-summary.md >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No super-linter summary found." >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Files Potentially Linted" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          find . -type f \
-            \( -name "*.js" -o -name "*.json" -o -name "*.py" \) \
-            ! -path "./node_modules/*" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### Code Style Check Summary"
+            echo ""
+            echo "This workflow checks code formatting for:"
+            echo "- Python"
+            echo "- JavaScript"
+            echo "- JSON"
+            echo ""
+            
+            if [ -f super-linter-output/super-linter-summary.md ]; then
+              cat super-linter-output/super-linter-summary.md
+            else
+              echo "No super-linter summary found."
+            fi
+      
+            echo ""
+            echo "### Files Potentially Linted"
+            echo '```'
+            find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.py" \) ! -path "./node_modules/*"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Super-Linter Artifact
         if: always()
