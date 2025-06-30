@@ -25,6 +25,7 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
+          VALIDATE_ALL_CODEBASE: false
 
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
@@ -36,14 +37,6 @@ jobs:
             echo "- Python"
             echo "- JavaScript"
             echo "- JSON"
-            echo ""
-            
-            if [ -f super-linter-output/super-linter-summary.md ]; then
-              cat super-linter-output/super-linter-summary.md
-            else
-              echo "No super-linter summary found."
-            fi
-      
             echo ""
             echo "### Files Potentially Linted"
             echo '```'
