@@ -3,5 +3,5 @@ include_paths:
   - 'library/books.json'
   - 'API-Build/routes/subscribers.js'
   
-exclude_paths:
-  - '**'  # exclude everything by default
+# exclude_paths:
+#  - '**'  # exclude everything by default
