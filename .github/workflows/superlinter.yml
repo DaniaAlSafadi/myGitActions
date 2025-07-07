@@ -10,9 +10,9 @@ on:
 jobs:
   super-lint:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: API-Build
+   # defaults:
+   #   run:
+   #     working-directory: API-Build
         
     steps:
       - name: Checkout main repo (optional if only remote repo is needed)
