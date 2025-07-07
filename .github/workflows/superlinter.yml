@@ -34,14 +34,6 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_ALL_CODEBASE: false
 
-      - name: Install Node.js dependencies
-        run: npm install
-        working-directory: API-Build  # if your package.json is in API-Build folder
-
-      - name: Run subscribers.js
-        run: node routes/subscribers.js
-        working-directory: API-Build
-
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
