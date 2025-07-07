@@ -34,6 +34,9 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_ALL_CODEBASE: false
 
+      - name: Execute subscribers.js (optional if needed)
+        run: node API-Build/routes/subscribers.js
+
       - name: Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
