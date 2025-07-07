@@ -12,12 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: myGitActions/API-Build
+        working-directory: API-Build
         
     steps:
       - name: Checkout main repo (optional if only remote repo is needed)
         uses: actions/checkout@v3
 
+      - name: Print repo structure
+        run: tree -L 3
+  
       - name: List files checked out
         run: find . -type f
 
