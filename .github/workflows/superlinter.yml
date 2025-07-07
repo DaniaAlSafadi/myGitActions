@@ -10,6 +10,10 @@ on:
 jobs:
   super-lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: myGitActions/API-Build
+        
     steps:
       - name: Checkout main repo (optional if only remote repo is needed)
         uses: actions/checkout@v3
