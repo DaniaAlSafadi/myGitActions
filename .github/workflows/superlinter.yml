@@ -10,21 +10,18 @@ on:
 jobs:
   super-lint:
     runs-on: ubuntu-latest
-   # defaults:
-   #  run:
-   #    working-directory: API-Build
-        
+
     steps:
-      - name: Checkout main repo (optional if only remote repo is needed)
+      - name: 📥 Checkout main repo
         uses: actions/checkout@v3
 
-      - name: Print repo structure
+      - name: 📁 Print repo structure
         run: tree -L 3
-  
-      - name: List files checked out
+
+      - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: Run Super-Linter on myGitActions/API-Build
+      - name: 🧹 Run Super-Linter on API-Build
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
@@ -34,7 +31,7 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_ALL_CODEBASE: false
 
-      - name: Add Super-Linter Summary to GitHub UI
+      - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
           {
@@ -51,7 +48,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Super-Linter Artifact
+      - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
