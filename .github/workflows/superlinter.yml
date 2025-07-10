@@ -1,4 +1,4 @@
-nname: Super-Linter
+name: Super-Linter
 on:
   push:
     paths:
