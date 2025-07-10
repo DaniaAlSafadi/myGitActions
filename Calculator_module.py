@@ -90,7 +90,7 @@ def main():
     
     print("📊 Calculation History:")
     for i, operation in enumerate(calc.get_history(), 1):
-    print(f"{i}. {operation}")
+        print(f"{i}. {operation}")
 
 if __name__ == "__main__":
     main()
