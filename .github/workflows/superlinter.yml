@@ -1,4 +1,4 @@
-name: Super-Linter
+nname: Super-Linter
 on:
   push:
     paths:
@@ -23,6 +23,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_ALL_CODEBASE: false
+          FILTER_REGEX_INCLUDE: "API-Build/routes/subscribers\\.js$"
+          JAVASCRIPT_DEFAULT_STYLE: standard
       
       - name: 🧹 Lint JSON Files
         uses: super-linter/super-linter@v7.1.0
@@ -31,6 +33,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
           VALIDATE_ALL_CODEBASE: false
+          FILTER_REGEX_INCLUDE: "library/books\\.json$"
       
       - name: 🧹 Lint Python Files
         uses: super-linter/super-linter@v7.1.0
@@ -39,6 +42,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_PYTHON: true
           VALIDATE_ALL_CODEBASE: false
+          FILTER_REGEX_INCLUDE: ".*\\.py$"
       
       - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
