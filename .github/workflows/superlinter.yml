@@ -1,36 +1,51 @@
 name: Super-Linter
-
 on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
       - 'API-Build/routes/subscribers.js'
-
 jobs:
   super-lint:
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Checkout main repo
         uses: actions/checkout@v3
-
       - name: 📁 Print repo structure
         run: tree -L 3
-
       - name: 📄 List all checked out files
         run: find . -type f
-
-      - name: 🧹 Run Super-Linter on API-Build
+      
+      - name: 🧹 Lint JavaScript Files
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JSON: true
-          VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
+          VALIDATE_JSON: false
+          VALIDATE_PYTHON: false
           VALIDATE_ALL_CODEBASE: false
-
+      
+      - name: 🧹 Lint JSON Files
+        uses: super-linter/super-linter@v7.1.0
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_JAVASCRIPT_STANDARD: false
+          VALIDATE_JSON: true
+          VALIDATE_PYTHON: false
+          VALIDATE_ALL_CODEBASE: false
+      
+      - name: 🧹 Lint Python Files
+        uses: super-linter/super-linter@v7.1.0
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_JAVASCRIPT_STANDARD: false
+          VALIDATE_JSON: false
+          VALIDATE_PYTHON: true
+          VALIDATE_ALL_CODEBASE: false
+      
       - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
@@ -38,16 +53,16 @@ jobs:
             echo "### Code Style Check Summary"
             echo ""
             echo "This workflow checks code formatting for:"
-            echo "- Python"
-            echo "- JavaScript"
-            echo "- JSON"
+            echo "- JavaScript (Step 4)"
+            echo "- JSON (Step 5)"
+            echo "- Python (Step 6)"
             echo ""
             echo "### Files Potentially Linted"
             echo '```'
             find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.py" \) ! -path "./node_modules/*"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-
+      
       - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
