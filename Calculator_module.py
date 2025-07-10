@@ -89,7 +89,7 @@ def main():
     print(f"Square Root: √16 = {calc.square_root(16)}")
     print(f"Percentage: 20% of 100 = {calc.percentage(100, 20)}")
     
-    print("\n📊 Calculation History:")
+    print("📊 Calculation History:")
     for i, operation in enumerate(calc.get_history(), 1):
         print(f"{i}. {operation}")
 
