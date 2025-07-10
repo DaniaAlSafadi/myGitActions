@@ -1,80 +1,39 @@
 name: Super-Linter
+
 on:
   push:
     paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
       - 'API-Build/routes/subscribers.js'
+
 jobs:
   super-lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+       working-directory: API-Build
+
     steps:
       - name: 📥 Checkout main repo
         uses: actions/checkout@v3
+
       - name: 📁 Print repo structure
         run: tree -L 3
+
       - name: 📄 List all checked out files
         run: find . -type f
-      
-      - name: 🧹 Lint JavaScript Files
-        uses: super-linter/super-linter@v7.1.0
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JAVASCRIPT_STANDARD: true
-          VALIDATE_ALL_CODEBASE: false
-          FILTER_REGEX_INCLUDE: "API-Build/routes/subscribers\\.js$"
-          # Disable other linters that run by default
-          VALIDATE_CHECKOV: false
-          VALIDATE_JAVASCRIPT_PRETTIER: false
-          VALIDATE_JSCPD: false
-          VALIDATE_GITHUB_ACTIONS: false
-          VALIDATE_GITLEAKS: false
-          VALIDATE_MARKDOWN: false
-          VALIDATE_MARKDOWN_PRETTIER: false
-          VALIDATE_NATURAL_LANGUAGE: false
-          VALIDATE_YAML: false
-          VALIDATE_YAML_PRETTIER: false
-      
-      - name: 🧹 Lint JSON Files
+
+      - name: 🧹 Run Super-Linter on API-Build
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
-          VALIDATE_ALL_CODEBASE: false
-          FILTER_REGEX_INCLUDE: "library/books\\.json$"
-          # Disable other linters that run by default
-          VALIDATE_CHECKOV: false
-          VALIDATE_JSON_PRETTIER: false
-          VALIDATE_JSCPD: false
-          VALIDATE_GITHUB_ACTIONS: false
-          VALIDATE_GITLEAKS: false
-          VALIDATE_MARKDOWN: false
-          VALIDATE_MARKDOWN_PRETTIER: false
-          VALIDATE_NATURAL_LANGUAGE: false
-          VALIDATE_YAML: false
-          VALIDATE_YAML_PRETTIER: false
-      
-      - name: 🧹 Lint Python Files
-        uses: super-linter/super-linter@v7.1.0
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_PYTHON: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_ALL_CODEBASE: false
-          FILTER_REGEX_INCLUDE: ".*\\.py$"
-          # Disable other linters that run by default
-          VALIDATE_CHECKOV: false
-          VALIDATE_JSCPD: false
-          VALIDATE_GITHUB_ACTIONS: false
-          VALIDATE_GITLEAKS: false
-          VALIDATE_MARKDOWN: false
-          VALIDATE_MARKDOWN_PRETTIER: false
-          VALIDATE_NATURAL_LANGUAGE: false
-          VALIDATE_YAML: false
-          VALIDATE_YAML_PRETTIER: false
-      
+
       - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
@@ -82,16 +41,16 @@ jobs:
             echo "### Code Style Check Summary"
             echo ""
             echo "This workflow checks code formatting for:"
-            echo "- JavaScript (Step 4)"
-            echo "- JSON (Step 5)"
-            echo "- Python (Step 6)"
+            echo "- Python"
+            echo "- JavaScript"
+            echo "- JSON"
             echo ""
             echo "### Files Potentially Linted"
             echo '```'
             find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.py" \) ! -path "./node_modules/*"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-      
+
       - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
