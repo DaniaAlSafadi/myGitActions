@@ -24,7 +24,17 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_ALL_CODEBASE: false
           FILTER_REGEX_INCLUDE: "API-Build/routes/subscribers\\.js$"
-          JAVASCRIPT_DEFAULT_STYLE: standard
+          # Disable other linters that run by default
+          VALIDATE_CHECKOV: false
+          VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_JSCPD: false
+          VALIDATE_GITHUB_ACTIONS: false
+          VALIDATE_GITLEAKS: false
+          VALIDATE_MARKDOWN: false
+          VALIDATE_MARKDOWN_PRETTIER: false
+          VALIDATE_NATURAL_LANGUAGE: false
+          VALIDATE_YAML: false
+          VALIDATE_YAML_PRETTIER: false
       
       - name: 🧹 Lint JSON Files
         uses: super-linter/super-linter@v7.1.0
@@ -34,6 +44,17 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_ALL_CODEBASE: false
           FILTER_REGEX_INCLUDE: "library/books\\.json$"
+          # Disable other linters that run by default
+          VALIDATE_CHECKOV: false
+          VALIDATE_JSON_PRETTIER: false
+          VALIDATE_JSCPD: false
+          VALIDATE_GITHUB_ACTIONS: false
+          VALIDATE_GITLEAKS: false
+          VALIDATE_MARKDOWN: false
+          VALIDATE_MARKDOWN_PRETTIER: false
+          VALIDATE_NATURAL_LANGUAGE: false
+          VALIDATE_YAML: false
+          VALIDATE_YAML_PRETTIER: false
       
       - name: 🧹 Lint Python Files
         uses: super-linter/super-linter@v7.1.0
@@ -43,6 +64,16 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_ALL_CODEBASE: false
           FILTER_REGEX_INCLUDE: ".*\\.py$"
+          # Disable other linters that run by default
+          VALIDATE_CHECKOV: false
+          VALIDATE_JSCPD: false
+          VALIDATE_GITHUB_ACTIONS: false
+          VALIDATE_GITLEAKS: false
+          VALIDATE_MARKDOWN: false
+          VALIDATE_MARKDOWN_PRETTIER: false
+          VALIDATE_NATURAL_LANGUAGE: false
+          VALIDATE_YAML: false
+          VALIDATE_YAML_PRETTIER: false
       
       - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
