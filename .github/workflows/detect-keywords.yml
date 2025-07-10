@@ -29,15 +29,15 @@ jobs:
 
           while IFS= read -r path; do
             if [[ -d "$path" ]]; then
-              js_hits=$(grep -rHn "console.log" "$path" --include="*.js" || true)
+              js_hits=$(grep -rHn "console.log" API-Build --include="*.js" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
               [[ -n "$js_hits" ]] && echo -e "🚨 Found console.log in $path:\n$js_hits" && hit_flag=1
             elif [[ "$path" == *.py ]]; then
-              py_hits=$(grep -Hn "print" "$path" || true)
+              py_hits=$(grep -Hn "print" Calculator_module.py | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
               [[ -n "$py_hits" ]] && echo -e "🚨 Found print in $path:\n$py_hits" && hit_flag=1
             fi
           done <<< "$FILE_PATHS"
 
-          echo "## Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
           [[ -n "$js_hits" ]] && echo -e "\n**console.log found in:**\n\`\`\`\n$js_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
           [[ -n "$py_hits" ]] && echo -e "\n**print found in:**\n\`\`\`\n$py_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
