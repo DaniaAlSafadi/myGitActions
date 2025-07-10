@@ -1,0 +1,23 @@
+name: Run Calculator Module
+
+on:
+  workflow_dispatch:  
+  push:
+    paths:
+      - 'Calculator_module.py'
+      - '.github/workflows/run-calculator.yml'
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run Calculator Module
+        run: python Calculator_module.py
