@@ -72,7 +72,6 @@ class Calculator:
         """Clear calculation history"""
         self.history.clear()
 
-
 def main():
     """Main function to demonstrate calculator usage"""
     calc = Calculator()
@@ -92,7 +91,6 @@ def main():
     print("📊 Calculation History:")
     for i, operation in enumerate(calc.get_history(), 1):
         print(f"{i}. {operation}")
-
 
 if __name__ == "__main__":
     main()
