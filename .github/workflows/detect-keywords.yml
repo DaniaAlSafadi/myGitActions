@@ -30,7 +30,7 @@ jobs:
 
           while IFS= read -r path; do
             if [[ -d "$path" ]]; then
-              js_hits=$(grep -rHn "console.log" "$path" --include="*.js" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
+              js_hits=$(grep -rHn "console.log" "$path" --include="*.js" --include="*.yml" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
               [[ -n "$js_hits" ]] && echo -e "🚨 Found console.log in $path:\n$js_hits" && hit_flag=1
             elif [[ "$path" == *.py ]]; then
               py_hits=$(grep -Hn "print" "$path" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
