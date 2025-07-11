@@ -20,6 +20,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Add test line for keyword detection
+        run: echo "console.log('This should trigger the workflow.')"
+
       - name: Scan files for keywords (console.log, print)
         run: |
           echo "🔍 Scanning specified paths for debug keywords..."
@@ -49,5 +52,3 @@ jobs:
             echo "✅ No disallowed keywords found."
           fi
           
-      # 🔽 This line is for testing the keyword detector
-      # console.log("This should trigger the workflow.")
