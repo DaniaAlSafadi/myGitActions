@@ -14,7 +14,8 @@ jobs:
       FILE_PATHS: |
         API-Build
         Calculator_module.py
-
+        myGitActions/.github/workflows/detect-keywords.yml 
+        
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,3 +48,6 @@ jobs:
           else
             echo "✅ No disallowed keywords found."
           fi
+          
+      # 🔽 This line is for testing the keyword detector
+      # console.log("This should trigger the workflow.")
