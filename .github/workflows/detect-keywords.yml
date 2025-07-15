@@ -46,5 +46,6 @@ jobs:
             exit 1
           else
             echo "✅ No disallowed keywords found."
+            echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
           fi
           
