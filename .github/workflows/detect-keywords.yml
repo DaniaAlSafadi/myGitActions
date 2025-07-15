@@ -19,12 +19,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 📁 Print repo structure
-        run: tree -L 3
-
-      - name: 📄 List all checked out files
-        run: find . -type f
-
       - name: Scan files for keywords (console.log, print)
         run: |
           echo "🔍 Scanning specified paths for debug keywords..."
