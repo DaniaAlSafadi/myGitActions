@@ -1,4 +1,4 @@
-name: Detect Keywords in Repo
+name: Detect Keywords in Files
 
 on:
   push:
@@ -11,11 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
-
-      - name: 🗂️ Print repo structure
-        run: tree -L 3 || echo "tree not available"
 
       - name: 🕵️‍♀️ Scan Entire Repo for Debug Keywords
         run: |
@@ -25,7 +22,15 @@ jobs:
           js_files=()
           py_files=()
 
-          # Format path with folder or file icon, strip leading './'
+          # Find all .js and .py files in whole repo
+          while IFS= read -r file; do
+            [[ "$file" == *.js ]] && js_files+=("$file")
+            [[ "$file" == *.py ]] && py_files+=("$file")
+          done < <(find . -type f \( -name "*.js" -o -name "*.py" \) 2>/dev/null | sort)
+
+          echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
+
+          # Format path with folder or file icon
           format_path() {
             local path="${1#./}"
             if [[ "$path" == */* ]]; then
@@ -35,53 +40,41 @@ jobs:
             fi
           }
 
-          # Find all .js and .py files
-          while IFS= read -r file; do
-            [[ "$file" == *.js ]] && js_files+=("$file")
-            [[ "$file" == *.py ]] && py_files+=("$file")
-          done < <(find . -type f \( -name "*.js" -o -name "*.py" \) | sort)
-
-          echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
-
-          # JS files
+          # Scan JS files for console.log
           js_flag=0
-          if [[ ${#js_files[@]} -gt 0 ]]; then
-            for file in "${js_files[@]}"; do
-              results=$(grep -Hn "console\.log" "$file" || true)
-              if [[ -n "$results" ]]; then
-                if [[ "$js_flag" -eq 0 ]]; then
-                  echo -e "**console.log found in:**" >> $GITHUB_STEP_SUMMARY
-                  js_flag=1
-                fi
-                formatted_path=$(format_path "$file")
-                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
-                echo '```' >> $GITHUB_STEP_SUMMARY
-                echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
-                echo '```' >> $GITHUB_STEP_SUMMARY
-                hit_flag=1
+          for file in "${js_files[@]}"; do
+            results=$(grep -Hn "console\.log" "$file" || true)
+            if [[ -n "$results" ]]; then
+              if [[ "$js_flag" -eq 0 ]]; then
+                echo -e "**console.log found in:**" >> $GITHUB_STEP_SUMMARY
+                js_flag=1
               fi
-            done
-          fi
+              formatted_path=$(format_path "$file")
+              echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              hit_flag=1
+            fi
+          done
 
-          # Python files
+          # Scan Python files for print
           py_flag=0
-          if [[ ${#py_files[@]} -gt 0 ]]; then
-            for file in "${py_files[@]}"; do
-              results=$(grep -Hn "print" "$file" || true)
-              if [[ -n "$results" ]]; then
-                if [[ "$py_flag" -eq 0 ]]; then
-                  echo -e "\n**print found in:**" >> $GITHUB_STEP_SUMMARY
-                  py_flag=1
-                fi
-                formatted_path=$(format_path "$file")
-                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
-                echo '```' >> $GITHUB_STEP_SUMMARY
-                echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
-                echo '```' >> $GITHUB_STEP_SUMMARY
-                hit_flag=1
+          for file in "${py_files[@]}"; do
+            results=$(grep -Hn "print" "$file" || true)
+            if [[ -n "$results" ]]; then
+              if [[ "$py_flag" -eq 0 ]]; then
+                echo -e "\n**print found in:**" >> $GITHUB_STEP_SUMMARY
+                py_flag=1
               fi
-            done
-          fi
+              formatted_path=$(format_path "$file")
+              echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              hit_flag=1
+            fi
+          done
 
           if [[ "$hit_flag" -eq 1 ]]; then
             echo "❌ Detected disallowed keywords."
