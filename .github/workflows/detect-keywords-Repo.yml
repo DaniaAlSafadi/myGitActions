@@ -7,7 +7,7 @@ on:
 
 jobs:
   detect-keywords:
-    name: 🕵️‍♀️ Detect `console.log` or `print`
+    name: Detect `console.log` or `print`
     runs-on: ubuntu-latest
 
     steps:
@@ -31,29 +31,28 @@ jobs:
             if [[ "$file" == *.js ]]; then
               results=$(grep -Hn "console.log" "$file" || true)
               if [[ -n "$results" ]]; then
-                js_hits="${js_hits}\n**${file}**\n\`\`\`\n"
+                js_hits="${js_hits}\n🗂️ ${file}\n"
                 while IFS= read -r line; do
+                  # Strip filename prefix before line number
                   js_hits="${js_hits}${line#"${file}:"}\n"
                 done <<< "$results"
-                js_hits="${js_hits}\`\`\`\n"
                 hit_flag=1
               fi
             elif [[ "$file" == *.py ]]; then
               results=$(grep -Hn "print" "$file" || true)
               if [[ -n "$results" ]]; then
-                py_hits="${py_hits}\n**${file}**\n\`\`\`\n"
+                py_hits="${py_hits}\n📄 ${file}\n"
                 while IFS= read -r line; do
                   py_hits="${py_hits}${line#"${file}:"}\n"
                 done <<< "$results"
-                py_hits="${py_hits}\`\`\`\n"
                 hit_flag=1
               fi
             fi
           done <<< "$FILE_PATHS"
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
-          [[ -n "$js_hits" ]] && echo -e "**console.log found in:**\n$js_hits" >> $GITHUB_STEP_SUMMARY
-          [[ -n "$py_hits" ]] && echo -e "**print found in:**\n$py_hits" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$js_hits" ]] && echo -e "console.log found in:\n$js_hits" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$py_hits" ]] && echo -e "print found in:\n$py_hits" >> $GITHUB_STEP_SUMMARY
 
           if [[ "$hit_flag" == "1" ]]; then
             echo "❌ Detected disallowed keywords."
