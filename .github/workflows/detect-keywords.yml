@@ -12,9 +12,8 @@ jobs:
 
     env:
       FILE_PATHS: |
-        API-Build/models/subscriber.js
-   #     API-Build
-    #    Calculator_module.py
+          API-Build
+          Calculator_module.py
         
     steps:
       - name: Checkout repository
