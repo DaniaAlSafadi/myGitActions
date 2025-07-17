@@ -2,7 +2,11 @@ name: Detect Keywords in Files
 
 on:
   push:
+      paths-ignore:
+      - '.github/workflows/detect-keywords-repo.yml'
   pull_request:
+     paths-ignore:
+      - '.github/workflows/detect-keywords-repo.yml'
   workflow_dispatch:
 
 jobs:
