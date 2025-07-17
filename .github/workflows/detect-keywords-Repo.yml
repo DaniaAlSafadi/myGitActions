@@ -25,7 +25,7 @@ jobs:
           js_files=()
           py_files=()
 
-          # Function to format paths with icons
+          # Format path with folder or file icon, strip leading './'
           format_path() {
             local path="${1#./}"
             if [[ "$path" == */* ]]; then
