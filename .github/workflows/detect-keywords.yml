@@ -43,11 +43,11 @@ jobs:
 
           # Function to add icon based on path
           format_path() {
-            if [[ "$1" == ./*/* ]]; then
-              echo "📁 _${1#./}_"
-            else
-              echo "📄 _${1#./}_"
-            fi
+           if [[ "$1" == */*/* ]]; then
+            echo "🗂️ _${1}_"
+          else
+           echo "📄 _${1}_"
+          fi
           }
 
           # JS files
