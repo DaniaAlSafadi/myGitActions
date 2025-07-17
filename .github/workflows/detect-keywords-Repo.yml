@@ -21,50 +21,40 @@ jobs:
           js_hits=""
           py_hits=""
 
-          FILE_PATHS=$(find . \( -type f \( -name "*.py" -o -name "*.js" \) -o -type d \))
+          FILE_PATHS=$(find . -type f \( -name "*.py" -o -name "*.js" \))
 
-          while IFS= read -r path; do
-           if [[ -d "$path" ]]; then
-            results=$(grep -rHn "console.log" "$path" --include="*.js" || true)
-            if [[ -n "$results" ]]; then
-              js_hits="${js_hits}\n📁 $path"
-              while IFS= read -r line; do
-                js_hits="${js_hits}\n${line}"
-          done <<< "$results"
-          echo -e "🚨 Found console.log in directory: $path\n\`\`\`\n$results\n\`\`\`"
-          hit_flag=1
-          fi
-          elif [[ "$path" == *.py ]]; then
-           results=$(grep -Hn "print" "$path" || true)
-           if [[ -n "$results" ]]; then
-             py_hits="${py_hits}\n📄 $path"
-             while IFS= read -r line; do
-              py_hits="${py_hits}\n${line}"
-          done <<< "$results"
-          echo -e "🚨 Found print in file: $path\n\`\`\`\n$results\n\`\`\`"
-          hit_flag=1
-          fi
-          elif [[ "$path" == *.js ]]; then
-          results=$(grep -Hn "console.log" "$path" || true)
-          if [[ -n "$results" ]]; then
-          js_hits="${js_hits}\n📄 $path"
-          while IFS= read -r line; do
-            js_hits="${js_hits}\n${line}"
-          done <<< "$results"
-          echo -e "🚨 Found console.log in file: $path\n\`\`\`\n$results\n\`\`\`"
-          hit_flag=1
-          fi
-          fi
+          while IFS= read -r file; do
+            if [[ "$file" == *.js ]]; then
+              results=$(grep -Hn "console.log" "$file" || true)
+              if [[ -n "$results" ]]; then
+                js_hits="${js_hits}\n**${file}**\n\`\`\`\n"
+                while IFS= read -r line; do
+                  js_hits="${js_hits}${line#"${file}:"}\n"
+                done <<< "$results"
+                js_hits="${js_hits}\`\`\`\n"
+                hit_flag=1
+              fi
+            elif [[ "$file" == *.py ]]; then
+              results=$(grep -Hn "print" "$file" || true)
+              if [[ -n "$results" ]]; then
+                py_hits="${py_hits}\n**${file}**\n\`\`\`\n"
+                while IFS= read -r line; do
+                  py_hits="${py_hits}${line#"${file}:"}\n"
+                done <<< "$results"
+                py_hits="${py_hits}\`\`\`\n"
+                hit_flag=1
+              fi
+            fi
           done <<< "$FILE_PATHS"
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
-          [[ -n "$js_hits" ]] && echo -e "\n**console.log found in:**\n\`\`\`\n$js_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
-          [[ -n "$py_hits" ]] && echo -e "\n**print found in:**\n\`\`\`\n$py_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$js_hits" ]] && echo -e "**console.log found in:**\n$js_hits" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$py_hits" ]] && echo -e "**print found in:**\n$py_hits" >> $GITHUB_STEP_SUMMARY
 
           if [[ "$hit_flag" == "1" ]]; then
-           echo "❌ Detected disallowed keywords."
-          exit 1
+            echo "❌ Detected disallowed keywords."
+            exit 1
           else
-          echo "✅ No disallowed keywords found."
-          echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
+            echo "✅ No disallowed keywords found."
+            echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
           fi
