@@ -1,86 +1,60 @@
 name: Detect Keywords in Repo
 
 on:
-  push:
   pull_request:
   workflow_dispatch:
 
 jobs:
   detect-keywords:
-    name: Detect `console.log` or `print`
+    name: 🕵️‍♀️ Detect `console.log` or `print`
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
+
+      - name: 📁 Print repo structure
+        run: tree -L 3
 
       - name: 🕵️‍♀️ Scan Entire Repo for Debug Keywords
         run: |
           echo "🔍 Scanning entire repo for debug keywords..."
 
           hit_flag=0
-          js_files=()
-          py_files=()
+          js_hits=""
+          py_hits=""
 
-          # Find all .js and .py files in whole repo
+          FILE_PATHS=$(find . -type f \( -name "*.py" -o -name "*.js" \))
+
           while IFS= read -r file; do
-            [[ "$file" == *.js ]] && js_files+=("$file")
-            [[ "$file" == *.py ]] && py_files+=("$file")
-          done < <(find . -type f \( -name "*.js" -o -name "*.py" \) 2>/dev/null | sort)
+            if [[ "$file" == *.js ]]; then
+              results=$(grep -Hn "console.log" "$file" || true)
+              if [[ -n "$results" ]]; then
+                js_hits="${js_hits}\n**${file}**\n\`\`\`\n"
+                while IFS= read -r line; do
+                  js_hits="${js_hits}${line#"${file}:"}\n"
+                done <<< "$results"
+                js_hits="${js_hits}\`\`\`\n"
+                hit_flag=1
+              fi
+            elif [[ "$file" == *.py ]]; then
+              results=$(grep -Hn "print" "$file" || true)
+              if [[ -n "$results" ]]; then
+                py_hits="${py_hits}\n**${file}**\n\`\`\`\n"
+                while IFS= read -r line; do
+                  py_hits="${py_hits}${line#"${file}:"}\n"
+                done <<< "$results"
+                py_hits="${py_hits}\`\`\`\n"
+                hit_flag=1
+              fi
+            fi
+          done <<< "$FILE_PATHS"
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$js_hits" ]] && echo -e "**console.log found in:**\n$js_hits" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$py_hits" ]] && echo -e "**print found in:**\n$py_hits" >> $GITHUB_STEP_SUMMARY
 
-          # Function to add icon based on path with debug
-          format_path() {
-            local path="${1#./}"  # remove leading './' if any
-            if [[ "$path" == */* ]]; then
-              echo "🗂️ _$path_"
-            else
-              echo "📄 _$path_"
-            fi
-          }
-
-          # Scan JS files for console.log
-          js_flag=0
-          for file in "${js_files[@]}"; do
-            echo "DEBUG: Checking JS file: '$file'"
-            results=$(grep -Hn "console\.log" "$file" || true)
-            if [[ -n "$results" ]]; then
-              if [[ "$js_flag" -eq 0 ]]; then
-                echo -e "**console.log found in:**" >> $GITHUB_STEP_SUMMARY
-                js_flag=1
-              fi
-              formatted_path=$(format_path "$file")
-              echo "DEBUG: Formatted JS path: '$formatted_path'"
-              echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              hit_flag=1
-            fi
-          done
-
-          # Scan Python files for print
-          py_flag=0
-          for file in "${py_files[@]}"; do
-            echo "DEBUG: Checking Python file: '$file'"
-            results=$(grep -Hn "print" "$file" || true)
-            if [[ -n "$results" ]]; then
-              if [[ "$py_flag" -eq 0 ]]; then
-                echo -e "\n**print found in:**" >> $GITHUB_STEP_SUMMARY
-                py_flag=1
-              fi
-              formatted_path=$(format_path "$file")
-              echo "DEBUG: Formatted Python path: '$formatted_path'"
-              echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              hit_flag=1
-            fi
-          done
-
-          if [[ "$hit_flag" -eq 1 ]]; then
+          if [[ "$hit_flag" == "1" ]]; then
             echo "❌ Detected disallowed keywords."
             exit 1
           else
