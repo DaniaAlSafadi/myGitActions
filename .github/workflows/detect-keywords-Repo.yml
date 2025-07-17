@@ -13,6 +13,9 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
+      - name: 📁 Print repo structure
+        run: tree -L 3
+
       - name: 🕵️‍♀️ Scan Entire Repo for Debug Keywords
         run: |
           echo "🔍 Scanning entire repo for debug keywords..."
