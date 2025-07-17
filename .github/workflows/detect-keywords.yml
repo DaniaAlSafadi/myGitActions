@@ -25,52 +25,74 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🕵️ Scan files for console.log and print
+      - name: 🕵️‍♀️ Scan Entire Repo for Debug Keywords
         run: |
-          echo "🔍 Scanning specified paths for debug keywords..."
+          echo "🔍 Scanning entire repo for debug keywords..."
 
           hit_flag=0
-          js_hits=""
-          py_hits=""
+          js_files=()
+          py_files=()
 
-          while IFS= read -r path; do
-            if [[ -d "$path" ]]; then
-              js_files=$(find "$path" -name "*.js")
-              for file in $js_files; do
-                matches=$(grep -Hn "console.log" "$file" || true)
-                if [[ -n "$matches" ]]; then
-                  js_hits+=$'\n📄 '"$file"$'\n'
-                  while IFS= read -r line; do
-                    js_hits+="${line##$file:}"$'\n'
-                  done <<< "$matches"
-                  hit_flag=1
-                fi
-              done
-            elif [[ "$path" == *.py ]]; then
-              matches=$(grep -Hn "print" "$path" || true)
-              if [[ -n "$matches" ]]; then
-                py_hits+=$'\n📄 '"$path"$'\n'
-                while IFS= read -r line; do
-                  py_hits+="${line##$path:}"$'\n'
-                done <<< "$matches"
-                hit_flag=1
-              fi
-            fi
-          done <<< "$FILE_PATHS"
+          while IFS= read -r file; do
+            [[ "$file" == *.js ]] && js_files+=("$file")
+            [[ "$file" == *.py" ]] && py_files+=("$file")
+          done < <(find . -type f \( -name "*.js" -o -name "*.py" \) | sort)
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
 
-          if [[ -n "$js_hits" ]]; then
-            echo -e "console.log found in:\n$js_hits" >> $GITHUB_STEP_SUMMARY
+          # Function to add icon based on path
+          format_path() {
+            if [[ "$1" == ./*/* ]]; then
+              echo "📁 _${1#./}_"
+            else
+              echo "📄 _${1#./}_"
+            fi
+          }
+
+          # JS files
+          js_flag=0
+          if [[ ${#js_files[@]} -gt 0 ]]; then
+            for file in "${js_files[@]}"; do
+              results=$(grep -Hn "console\.log" "$file" || true)
+              if [[ -n "$results" ]]; then
+                if [[ "$js_flag" -eq 0 ]]; then
+                  echo -e "**console.log found in:**" >> $GITHUB_STEP_SUMMARY
+                  js_flag=1
+                fi
+                formatted_path=$(format_path "$file")
+                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                hit_flag=1
+              fi
+            done
           fi
 
-          if [[ -n "$py_hits" ]]; then
-            echo -e "print found in:\n$py_hits" >> $GITHUB_STEP_SUMMARY
+          # Python files
+          py_flag=0
+          if [[ ${#py_files[@]} -gt 0 ]]; then
+            for file in "${py_files[@]}"; do
+              results=$(grep -Hn "print" "$file" || true)
+              if [[ -n "$results" ]]; then
+                if [[ "$py_flag" -eq 0 ]]; then
+                  echo -e "\n**print found in:**" >> $GITHUB_STEP_SUMMARY
+                  py_flag=1
+                fi
+                formatted_path=$(format_path "$file")
+                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                hit_flag=1
+              fi
+            done
           fi
 
           if [[ "$hit_flag" -eq 1 ]]; then
             echo "❌ Detected disallowed keywords."
             exit 1
           else
+            echo "✅ No disallowed keywords found."
             echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
           fi
