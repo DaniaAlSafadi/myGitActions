@@ -1,6 +1,7 @@
 name: Detect Keywords in Repo
 
 on:
+  push:
   pull_request:
   workflow_dispatch:
 
