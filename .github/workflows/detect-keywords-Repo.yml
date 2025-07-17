@@ -1,0 +1,46 @@
+name: Detect Keywords in Files
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  detect-keywords:
+    name: 🔍 Detect `console.log` and `print`
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🕵️‍♀️ Scan Entire Repo for Debug Keywords
+        run: |
+          echo "🔍 Scanning entire repo for debug keywords..."
+
+          hit_flag=0
+          js_hits=""
+          py_hits=""
+
+          FILE_PATHS=$(find . -type d -o -name "*.py")
+
+          while IFS= read -r path; do
+            if [[ -d "$path" ]]; then
+              js_hits=$(grep -rHn "console.log" "$path" --include="*.js" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
+              [[ -n "$js_hits" ]] && echo -e "🚨 Found console.log in $path:\n$js_hits" && hit_flag=1
+            elif [[ "$path" == *.py ]]; then
+              py_hits=$(grep -Hn "print" "$path" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
+              [[ -n "$py_hits" ]] && echo -e "🚨 Found print in $path:\n$py_hits" && hit_flag=1
+            fi
+          done <<< "$FILE_PATHS"
+
+          echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$js_hits" ]] && echo -e "\n**console.log found in:**\n\`\`\`\n$js_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+          [[ -n "$py_hits" ]] && echo -e "\n**print found in:**\n\`\`\`\n$py_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "$hit_flag" == "1" ]]; then
+            echo "❌ Detected disallowed keywords."
+            exit 1
+          else
+            echo "✅ No disallowed keywords found."
+            echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
+          fi
