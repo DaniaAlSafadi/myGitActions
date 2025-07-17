@@ -1,4 +1,4 @@
-name: Detect Keywords in Files
+name: Detect Keywords in Repo
 
 on:
   pull_request:
