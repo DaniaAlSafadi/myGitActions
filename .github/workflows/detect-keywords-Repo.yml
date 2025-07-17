@@ -30,7 +30,7 @@ jobs:
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
 
-          # Format path with folder or file icon
+          # Function to format path with icons
           format_path() {
             local path="${1#./}"
             if [[ "$path" == */* ]]; then
