@@ -21,7 +21,9 @@ jobs:
           hit_flag=0
           js_files=()
           py_files=()
-
+          
+          FILE_PATHS=$(find . -type f \( -name "*.py" -o -name "*.js" \))
+          
           # Find all .js and .py files in whole repo
           while IFS= read -r file; do
             [[ "$file" == *.js ]] && js_files+=("$file")
@@ -30,14 +32,13 @@ jobs:
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
 
-          # Function to format path with icons
+          # Function to add icon based on path
           format_path() {
-            local path="${1#./}"
-            if [[ "$path" == */* ]]; then
-              echo "🗂️ _$path_"
-            else
-              echo "📄 _$path_"
-            fi
+          if [[ "$1" == */* ]]; then
+           echo "🗂️ _${1}_"
+          else
+           echo "📄 _${1}_"
+          fi
           }
 
           # Scan JS files for console.log
