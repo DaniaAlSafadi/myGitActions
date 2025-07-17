@@ -2,16 +2,18 @@ name: Detect Keywords in Files
 
 on:
   push:
-    paths-ignore:
-      - '.github/workflows/detect-keywords-repo.yml'
+    paths:
+      - 'API-Build/**'
+      - 'Calculator_module.py'
   pull_request:
-    paths-ignore:
-      - '.github/workflows/detect-keywords-repo.yml'
+    paths:
+      - 'API-Build/**'
+      - 'Calculator_module.py'
   workflow_dispatch:
 
 jobs:
   detect-keywords:
-    name: 🔎 Detect `console.log` or `print`
+    name: Detect console.log and print keywords
     runs-on: ubuntu-latest
 
     env:
@@ -20,51 +22,55 @@ jobs:
         Calculator_module.py
 
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🕵️‍♀️ Scan files for keywords (console.log, print)
+      - name: 🕵️ Scan files for console.log and print
         run: |
           echo "🔍 Scanning specified paths for debug keywords..."
 
           hit_flag=0
-          js_flag=0
-          py_flag=0
+          js_hits=""
+          py_hits=""
 
           while IFS= read -r path; do
             if [[ -d "$path" ]]; then
-              while IFS= read -r file; do
-                results=$(grep -Hn "console\.log" "$file" || true)
-                if [[ -n "$results" ]]; then
-                  js_hits="${js_hits}\n🗂️ ${file}\n"
-                  js_hits="${js_hits}$(echo "$results" | sed -E "s|${file}:||")\n"
+              js_files=$(find "$path" -name "*.js")
+              for file in $js_files; do
+                matches=$(grep -Hn "console.log" "$file" || true)
+                if [[ -n "$matches" ]]; then
+                  js_hits+=$'\n📄 '"$file"$'\n'
+                  while IFS= read -r line; do
+                    js_hits+="${line##$file:}"$'\n'
+                  done <<< "$matches"
                   hit_flag=1
                 fi
-              done < <(find "$path" -type f -name "*.js" | sort)
+              done
             elif [[ "$path" == *.py ]]; then
-              results=$(grep -Hn "print" "$path" || true)
-              if [[ -n "$results" ]]; then
-                py_hits="${py_hits}\n📄 ${path}\n"
-                py_hits="${py_hits}$(echo "$results" | sed -E "s|${path}:||")\n"
+              matches=$(grep -Hn "print" "$path" || true)
+              if [[ -n "$matches" ]]; then
+                py_hits+=$'\n📄 '"$path"$'\n'
+                while IFS= read -r line; do
+                  py_hits+="${line##$path:}"$'\n'
+                done <<< "$matches"
                 hit_flag=1
               fi
             fi
           done <<< "$FILE_PATHS"
 
-          echo "🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
 
           if [[ -n "$js_hits" ]]; then
-            echo -e "\nconsole.log found in:${js_hits}" >> $GITHUB_STEP_SUMMARY
+            echo -e "console.log found in:\n$js_hits" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [[ -n "$py_hits" ]]; then
-            echo -e "\nprint found in:${py_hits}" >> $GITHUB_STEP_SUMMARY
+            echo -e "print found in:\n$py_hits" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [[ "$hit_flag" -eq 1 ]]; then
             echo "❌ Detected disallowed keywords."
             exit 1
           else
-            echo "✅ No disallowed keywords found."
             echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
           fi
