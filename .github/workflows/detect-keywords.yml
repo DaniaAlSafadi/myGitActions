@@ -33,9 +33,10 @@ jobs:
           js_files=()
           py_files=()
 
+          # Find all .js and .py files
           while IFS= read -r file; do
             [[ "$file" == *.js ]] && js_files+=("$file")
-            [[ "$file" == *.py" ]] && py_files+=("$file")
+            [[ "$file" == *.py ]] && py_files+=("$file")
           done < <(find . -type f \( -name "*.js" -o -name "*.py" \) | sort)
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
