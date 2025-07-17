@@ -6,15 +6,15 @@ on:
 
 jobs:
   detect-keywords:
-    name: 🕵️‍♀️ Detect `console.log` or `print`
+    name: Detect `console.log` or `print`
     runs-on: ubuntu-latest
 
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 📁 Print repo structure
-        run: tree -L 3
+      - name: 🗂️ Print repo structure
+        run: tree -L 3 || echo "tree not available"
 
       - name: 🕵️‍♀️ Scan Entire Repo for Debug Keywords
         run: |
@@ -23,6 +23,15 @@ jobs:
           hit_flag=0
           js_files=()
           py_files=()
+
+          # Function to format paths with icons
+          format_path() {
+            if [[ "$1" == */* ]]; then
+              echo "🗂️ _${1#./}_"
+            else
+              echo "📄 _${1#./}_"
+            fi
+          }
 
           # Find all .js and .py files
           while IFS= read -r file; do
@@ -42,7 +51,8 @@ jobs:
                   echo -e "**console.log found in:**" >> $GITHUB_STEP_SUMMARY
                   js_flag=1
                 fi
-                echo -e "\n*_${file}_*" >> $GITHUB_STEP_SUMMARY
+                formatted_path=$(format_path "$file")
+                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
                 echo '```' >> $GITHUB_STEP_SUMMARY
                 echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
                 echo '```' >> $GITHUB_STEP_SUMMARY
@@ -61,7 +71,8 @@ jobs:
                   echo -e "\n**print found in:**" >> $GITHUB_STEP_SUMMARY
                   py_flag=1
                 fi
-                echo -e "\n*_${file}_*" >> $GITHUB_STEP_SUMMARY
+                formatted_path=$(format_path "$file")
+                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
                 echo '```' >> $GITHUB_STEP_SUMMARY
                 echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
                 echo '```' >> $GITHUB_STEP_SUMMARY
