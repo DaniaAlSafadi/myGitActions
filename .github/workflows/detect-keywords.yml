@@ -1,4 +1,4 @@
-cificname: Detect Keywords in Files
+name: Detect Keywords in Files
 
 on:
   push:
