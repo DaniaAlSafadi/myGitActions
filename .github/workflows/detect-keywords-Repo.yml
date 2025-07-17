@@ -6,7 +6,7 @@ on:
 
 jobs:
   detect-keywords:
-    name: 🕵️‍♀️ Detect `console.log` and `print`
+    name: 🕵️‍♀️ Detect `console.log` or `print`
     runs-on: ubuntu-latest
 
     steps:
