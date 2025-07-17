@@ -4,6 +4,7 @@ const Subscriber = require('../models/subscriber')
 
 console.log("🎯 Let's try a new action")
 console.log("😅 You caught me! Detected a console.log in the code!")
+console.log("🚨 Heads up! Found a console.log that slipped through!")
 
 // Getting all
 router.get('/', async (req, res) => {
