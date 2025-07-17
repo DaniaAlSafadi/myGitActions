@@ -11,7 +11,7 @@ on:
 
 jobs:
   detect-keywords:
-    name: Detect console.log and print keywords
+    name: 🕵️‍♀️ Detect console.log or print keywords
     runs-on: ubuntu-latest
 
     env:
@@ -20,36 +20,64 @@ jobs:
           Calculator_module.py
         
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Scan files for keywords (console.log, print)
+      - name: 🕵️‍♀️ Scan files for keywords (console.log, print)
         run: |
           echo "🔍 Scanning specified paths for debug keywords..."
 
           hit_flag=0
           js_hits=""
           py_hits=""
-
-          while IFS= read -r path; do
-            if [[ -d "$path" ]]; then
-              js_hits=$(grep -rHn "console.log" "$path" --include="*.js" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
-              [[ -n "$js_hits" ]] && echo -e "🚨 Found console.log in $path:\n$js_hits" && hit_flag=1
-            elif [[ "$path" == *.py ]]; then
-              py_hits=$(grep -Hn "print" "$path" | sed -E 's/.*:([0-9]+):(.*)/\1: \2/' || true)
-              [[ -n "$py_hits" ]] && echo -e "🚨 Found print in $path:\n$py_hits" && hit_flag=1
-            fi
-          done <<< "$FILE_PATHS"
+          
+          while IFS= read -r file; do
+            [[ "$file" == *.js ]] && js_files+=("$file")
+            [[ "$file" == *.py ]] && py_files+=("$file")
+          done < <(find . -type f \( -name "*.js" -o -name "*.py" \) | sort)
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
-          [[ -n "$js_hits" ]] && echo -e "\n**console.log found in:**\n\`\`\`\n$js_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
-          [[ -n "$py_hits" ]] && echo -e "\n**print found in:**\n\`\`\`\n$py_hits\n\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "$hit_flag" == "1" ]]; then
+          js_flag=0
+          if [[ ${#js_files[@]} -gt 0 ]]; then
+            for file in "${js_files[@]}"; do
+              results=$(grep -Hn "console\.log" "$file" || true)
+              if [[ -n "$results" ]]; then
+                if [[ "$js_flag" -eq 0 ]]; then
+                  echo -e "**console.log found in:**" >> $GITHUB_STEP_SUMMARY
+                  js_flag=1
+                fi
+                echo -e "\n*_${file}_*" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                hit_flag=1
+              fi
+            done
+          fi
+
+          py_flag=0
+          if [[ ${#py_files[@]} -gt 0 ]]; then
+            for file in "${py_files[@]}"; do
+              results=$(grep -Hn "print" "$file" || true)
+              if [[ -n "$results" ]]; then
+                if [[ "$py_flag" -eq 0 ]]; then
+                  echo -e "\n**print found in:**" >> $GITHUB_STEP_SUMMARY
+                  py_flag=1
+                fi
+                echo -e "\n*_${file}_*" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                hit_flag=1
+              fi
+            done
+          fi
+
+          if [[ "$hit_flag" -eq 1 ]]; then
             echo "❌ Detected disallowed keywords."
             exit 1
           else
             echo "✅ No disallowed keywords found."
             echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
           fi
-          
