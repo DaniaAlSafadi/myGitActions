@@ -27,10 +27,11 @@ jobs:
 
           # Function to format paths with icons
           format_path() {
-            if [[ "$1" == */* ]]; then
-              echo "🗂️ _${1#./}_"
+            local path="${1#./}"
+            if [[ "$path" == */* ]]; then
+              echo "🗂️ _$path_"
             else
-              echo "📄 _${1#./}_"
+              echo "📄 _$path_"
             fi
           }
 
