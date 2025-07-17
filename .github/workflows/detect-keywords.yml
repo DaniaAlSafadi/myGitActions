@@ -13,7 +13,7 @@ on:
 
 jobs:
   detect-keywords:
-    name: Detect console.log and print keywords
+    name: 🕵️‍♀️ Detect `console.log` or `print`
     runs-on: ubuntu-latest
 
     env:
@@ -35,9 +35,9 @@ jobs:
 
           # Find all .js and .py files
           while IFS= read -r file; do
-            [[ "$file" == *.js ]] && js_files+=("$file")
-            [[ "$file" == *.py ]] && py_files+=("$file")
-          done < <(find . -type f \( -name "*.js" -o -name "*.py" \) | sort)
+           [[ "$file" == *.js ]] && js_files+=("$file")
+           [[ "$file" == *.py ]] && py_files+=("$file")
+          done < <(find $FILE_PATHS -type f \( -name "*.js" -o -name "*.py" \) 2>/dev/null | sort)
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
 
