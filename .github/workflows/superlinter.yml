@@ -24,11 +24,6 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🔎 What files are matching the filter?
-        run: |
-          echo "List of candidate files:"
-          find . -type f | sed 's|^\./||' | grep -E "(library/books\.json|API-Build/routes/subscribers\.js)$"
-          
       - name: 🧹 Run Super-Linter on Specific Paths
         uses: super-linter/super-linter@v7.1.0
         env:
