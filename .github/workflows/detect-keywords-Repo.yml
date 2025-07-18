@@ -37,10 +37,10 @@ jobs:
           format_path() {
             clean_path="${1#./}"
             if [[ "$clean_path" == */* ]]; then
-              printf "🗂️ _%-40s_\n" "$clean_path"
-            else
-              printf "📄 _%-40s_\n" "$clean_path"
-            fi
+            echo "🗂️ _${clean_path}_"
+          else
+            echo "📄 _${clean_path}_"
+          fi
           }
 
           # JS files
@@ -50,7 +50,7 @@ jobs:
               results=$(grep -Hn "console\.log" "$file" || true)
               if [[ -n "$results" ]]; then
                 if [[ "$js_flag" -eq 0 ]]; then
-                  echo -e "*console.log found in:*" >> $GITHUB_STEP_SUMMARY
+                  echo -e "**console.log found in:**" >> $GITHUB_STEP_SUMMARY
                   js_flag=1
                 fi
                 format_path "$file" >> $GITHUB_STEP_SUMMARY
@@ -69,7 +69,7 @@ jobs:
               results=$(grep -Hn "print" "$file" || true)
               if [[ -n "$results" ]]; then
                 if [[ "$py_flag" -eq 0 ]]; then
-                  echo -e "\n*print found in:*" >> $GITHUB_STEP_SUMMARY
+                  echo -e "\n**print found in:**" >> $GITHUB_STEP_SUMMARY
                   py_flag=1
                 fi
                 format_path "$file" >> $GITHUB_STEP_SUMMARY
