@@ -19,60 +19,55 @@ jobs:
         run: find . -type f
 
       - name: 🧹 Run Super-Linter on Specific Paths
-        run: |
-          super-linter \
-            --default-branch main \
-            --validate-json true \
-            --validate-python true \
-            --validate-javascript-standard true \
-            --validate-all-codebase false \
-            --filter-regex-include "(library/books\.json|API-Build/routes/subscribers\.js)$" \
-            --filter-regex-exclude "(.jscpd\.json|.markdownlint\.json)$" \
-            | tee super-linter.log
+        uses: super-linter/super-linter@v7.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
+          FILTER_REGEX_INCLUDE: "(library/books\.json|API-Build/routes/subscribers\.js)$"
+          FILTER_REGEX_EXCLUDE: "(.jscpd\.json|.markdownlint\.json)$"
+          VALIDATE_JSON: true
+          VALIDATE_PYTHON: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
 
       - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
-          {
-            echo "### Code Style Check Summary"
-            echo ""
-            echo "This workflow checks code formatting for:"
-            echo "- Python"
-            echo "- JavaScript"
-            echo "- JSON"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          js_errors=$(grep -E '/.*\.js:[0-9]+:' super-linter.log || true)
-          py_errors=$(grep -E '/.*\.py:[0-9]+:' super-linter.log || true)
-          json_errors=$(grep -E '/.*\.json:[0-9]+:' super-linter.log || true)
+          lint_errors=$(grep -E '/.*\.(js|py|json):[0-9]+:' "$GITHUB_STEP_SUMMARY" || true)
 
-          if [[ -n "$js_errors" || -n "$py_errors" || -n "$json_errors" ]]; then
-            echo -e "\n## ❌ Detected Style Errors" >> "$GITHUB_STEP_SUMMARY"
-
-            if [[ -n "$js_errors" ]]; then
-              echo -e "\n### JavaScript" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              echo "$js_errors" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-            fi
-
-            if [[ -n "$py_errors" ]]; then
-              echo -e "\n### Python" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              echo "$py_errors" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-            fi
-
-            if [[ -n "$json_errors" ]]; then
-              echo -e "\n### JSON" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              echo "$json_errors" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-            fi
-          else
+          if [[ -z "$lint_errors" ]]; then
             echo -e "\n✅ No style issues detected in JavaScript, Python, or JSON files." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo -e "\n## ❌ Detected Style Errors" >> "$GITHUB_STEP_SUMMARY"
+
+          if echo "$lint_errors" | grep '\.js:' >/dev/null; then
+            echo -e "\n### JavaScript" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$lint_errors" | grep '\.js:' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if echo "$lint_errors" | grep '\.py:' >/dev/null; then
+            echo -e "\n### Python" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$lint_errors" | grep '\.py:' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if echo "$lint_errors" | grep '\.json:' >/dev/null; then
+            echo -e "\n### JSON" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$lint_errors" | grep '\.json:' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: 📦 Upload Super-Linter Artifact
@@ -80,4 +75,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
-          path: super-linter.log
+          path: super-linter-output/
