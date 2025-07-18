@@ -33,12 +33,13 @@ jobs:
 
           echo "## 🔎 Keyword Scan Report" >> $GITHUB_STEP_SUMMARY
 
-          # Function to add emoji and italic path
+          # Function to add emoji and italic formatted path with alignment
           format_path() {
-            if [[ "$1" == */* ]]; then
-              echo "🗂️ _${1}_"
+            clean_path="${1#./}"
+            if [[ "$clean_path" == */* ]]; then
+              printf "🗂️ _%-40s_\n" "$clean_path"
             else
-              echo "📄 _${1}_"
+              printf "📄 _%-40s_\n" "$clean_path"
             fi
           }
 
@@ -52,9 +53,8 @@ jobs:
                   echo -e "*console.log found in:*" >> $GITHUB_STEP_SUMMARY
                   js_flag=1
                 fi
-                formatted_path=$(format_path "$file")
-                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
-                echo '```' >> $GITHUB_STEP_SUMMARY
+                format_path "$file" >> $GITHUB_STEP_SUMMARY
+                echo '```js' >> $GITHUB_STEP_SUMMARY
                 echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
                 echo '```' >> $GITHUB_STEP_SUMMARY
                 hit_flag=1
@@ -72,9 +72,8 @@ jobs:
                   echo -e "\n*print found in:*" >> $GITHUB_STEP_SUMMARY
                   py_flag=1
                 fi
-                formatted_path=$(format_path "$file")
-                echo -e "\n$formatted_path" >> $GITHUB_STEP_SUMMARY
-                echo '```' >> $GITHUB_STEP_SUMMARY
+                format_path "$file" >> $GITHUB_STEP_SUMMARY
+                echo '```py' >> $GITHUB_STEP_SUMMARY
                 echo "$results" | sed -E "s|$file:||" >> $GITHUB_STEP_SUMMARY
                 echo '```' >> $GITHUB_STEP_SUMMARY
                 hit_flag=1
