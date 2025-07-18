@@ -1,5 +1,9 @@
 name: Super-Linter
 
+permissions:
+  contents: read
+  statuses: write
+
 on:
   push:
     paths:
@@ -18,8 +22,8 @@ jobs:
       - name: 📥 Checkout main repo
         uses: actions/checkout@v3
 
-      - name: 📁 Print repo structure
-        run: tree -L 3
+     # - name: 📁 Print repo structure
+     #   run: tree -L 3
 
       - name: 📄 List all checked out files
         run: find . -type f
