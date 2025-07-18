@@ -35,6 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: false
           FILTER_REGEX_INCLUDE: "(library/books\\.json|API-Build/routes/subscribers\\.js)$"
+          FILTER_REGEX_EXCLUDE: "(.jscpd\\.json|.markdownlint\\.json)$"
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
