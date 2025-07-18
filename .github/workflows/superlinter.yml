@@ -1,9 +1,5 @@
 name: Super-Linter
 
-permissions:
-  contents: read
-  statuses: write
-
 on:
   push:
     paths:
@@ -28,16 +24,20 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🧹 Run Super-Linter on API-Build
+      - name: 🔎 What files are matching the filter?
+        run: |
+          echo "List of candidate files:"
+          find . -type f | sed 's|^\./||' | grep -E "(library/books\.json|API-Build/routes/subscribers\.js)$"
+          
+      - name: 🧹 Run Super-Linter on Specific Paths
         uses: super-linter/super-linter@v7.1.0
         env:
-          DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
+          FILTER_REGEX_INCLUDE: "(library/books\\.json|API-Build/routes/subscribers\\.js)$"
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          VALIDATE_ALL_CODEBASE: false
-          FILTER_REGEX_INCLUDE: "(library/books\\.json|API-Build/routes/subscribers\\.js)$"
           
       - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
@@ -52,7 +52,7 @@ jobs:
             echo ""
             echo "### Files Potentially Linted"
             echo '```'
-            find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.py" \) ! -path "./node_modules/*"
+            find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.py" \) ! -path "./node_modules/*" | sed 's|^\./||'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
