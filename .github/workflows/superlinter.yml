@@ -1,6 +1,7 @@
 name: Super-Linter
 
 on:
+  push:
   workflow_dispatch:
   pull_request:
 
@@ -41,30 +42,6 @@ jobs:
             echo "- JavaScript"
             echo "- JSON"
           } >> "$GITHUB_STEP_SUMMARY"
-          
-      - name: Append Linter Logs to Summary
-        if: always()
-        run: |
-         LOG_FILE="super-linter.log"
-         SUMMARY_FILE="$GITHUB_STEP_SUMMARY"
-
-         echo -e "\n## ❌ Detected Style Errors\n" >> "$SUMMARY_FILE"
-
-         extract_logs() {
-          LANG_NAME=$1
-          if grep -q "Linting ${LANG_NAME} items..." "$LOG_FILE"; then
-            echo "### $LANG_NAME" >> "$SUMMARY_FILE"
-            echo '```' >> "$SUMMARY_FILE"
-            awk "/Linting ${LANG_NAME} items/,/Stderr contents for ${LANG_NAME}/" "$LOG_FILE" | sed '/Stderr contents/,$d' >> "$SUMMARY_FILE"
-            echo '```' >> "$SUMMARY_FILE"
-          fi
-        }
-
-        extract_logs "JAVASCRIPT_STANDARD"
-        extract_logs "PYTHON"
-        extract_logs "JSON"
-
-      
 
       - name: 📦 Upload Super-Linter Artifact
         if: always()
