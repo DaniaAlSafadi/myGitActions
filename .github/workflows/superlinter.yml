@@ -25,28 +25,42 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🧹 Run Super-Linter
-        uses: super-linter/super-linter@v7.1.0
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JSON: true
-          VALIDATE_PYTHON: true
-          VALIDATE_JAVASCRIPT_STANDARD: true
+      - name: 🧹 Run Super-Linter and Save Output
+        run: |
+          export RUN_LOCAL=true
+          export VALIDATE_JSON=true
+          export VALIDATE_PYTHON=true
+          export VALIDATE_JAVASCRIPT_STANDARD=true
+          export DEFAULT_BRANCH=main
+          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📝 Add Super-Linter Markdown Summary
+          npx super-linter 2>&1 | tee super-linter.log
+        continue-on-error: true
+
+      - name: 📝 Add JavaScript Errors in Code Block
         if: always()
         run: |
-          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo '### 🚨 JavaScript Linting Errors' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          grep -P '/.*\.js:\d+:\d+:' super-linter.log >> "$GITHUB_STEP_SUMMARY"
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📝 Add General Code Style Summary
+        if: always()
+        run: |
+          echo "### ✅ Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📦 Upload Super-Linter Artifact
+      - name: 📦 Upload Super-Linter Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-output
-          path: super-linter-output/
+          name: super-linter-log
+          path: super-linter.log
