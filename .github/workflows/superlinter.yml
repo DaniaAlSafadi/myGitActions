@@ -45,11 +45,6 @@ jobs:
             echo "- Python"
             echo "- JavaScript"
             echo "- JSON"
-            echo ""
-            echo "### Files Potentially Linted"
-            echo '```'
-            find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.py" \) ! -path "./node_modules/*"
-            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
      
