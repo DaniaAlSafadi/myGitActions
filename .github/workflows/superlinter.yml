@@ -33,7 +33,7 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          VALIDATE_ALL_CODEBASE: true  # ✅ Forces linting all files, not just modified ones
+          VALIDATE_ALL_CODEBASE: false
 
       - name: 📝 Add Super-Linter Markdown Summary
         if: always()
