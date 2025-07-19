@@ -2,6 +2,10 @@ name: Super-Linter
 
 on:
   push:
+   paths:
+      - '.github/workflows/superlinter.yml'
+      - 'library/books.json'
+      - 'API-Build/routes/subscribers.js'
   workflow_dispatch:
   pull_request:
 
@@ -41,11 +45,18 @@ jobs:
             echo "- Python"
             echo "- JavaScript"
             echo "- JSON"
+            echo ""
+            echo "### Files Potentially Linted"
+            echo '```'
+            find . -type f \( -name "*.js" -o -name "*.json" -o -name "*.py" \) ! -path "./node_modules/*"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+     
       - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
           path: super-linter-output/
+          
