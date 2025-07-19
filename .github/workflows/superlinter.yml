@@ -30,7 +30,7 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_ALL_CODEBASE: false
           
-            - name: 📝 Add Super-Linter Summary to GitHub UI
+      - name: 📝 Add Super-Linter Summary to GitHub UI
         if: always()
         run: |
           # Extract linter logs from the GitHub Actions log file itself (if available) or fallback to no logs
