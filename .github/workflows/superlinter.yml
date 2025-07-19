@@ -34,7 +34,7 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
 
-      - name: 📝 Add Super-Linter Summary with Total Issues and Affected Files
+      - name: 📝 Add Super-Linter Markdown Summary
         if: always()
         run: |
           echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
@@ -43,26 +43,6 @@ jobs:
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ -f super-linter-output/sarif/sarif-lint.sarif ]; then
-            echo "Parsing lint results..."
-
-            # Use jq to parse SARIF JSON (install jq on runner if missing)
-            sudo apt-get update && sudo apt-get install -y jq
-
-            # Total issues (errors + warnings)
-            TOTAL_ISSUES=$(jq '[.runs[].results[]] | length' super-linter-output/sarif/sarif-lint.sarif)
-            echo "- Total Issues Found: $TOTAL_ISSUES" >> "$GITHUB_STEP_SUMMARY"
-
-            # List unique affected files
-            echo "- Affected Files:" >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.runs[].results[].locations[].physicalLocation.artifactLocation.uri' super-linter-output/sarif/sarif-lint.sarif | sort -u | while read file; do
-              echo "  - $file" >> "$GITHUB_STEP_SUMMARY"
-            done
-          else
-            echo "No SARIF lint report found." >> "$GITHUB_STEP_SUMMARY"
-          fi
 
       - name: 📦 Upload Super-Linter Artifact
         if: always()
