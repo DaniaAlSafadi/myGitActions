@@ -2,12 +2,12 @@ name: Super-Linter
 
 on:
   push:
-   paths:
+    paths:
       - '.github/workflows/superlinter.yml'
       - 'library/books.json'
       - 'API-Build/routes/subscribers.js'
-  workflow_dispatch:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   super-lint:
@@ -33,25 +33,21 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_ALL_CODEBASE: true  # ✅ Forces linting all files, not just modified ones
 
-      - name: 📝 Add Super-Linter Summary to GitHub UI
+      - name: 📝 Add Super-Linter Markdown Summary
         if: always()
         run: |
-          {
-            echo "### Code Style Check Summary"
-            echo ""
-            echo "This workflow checks code formatting for:"
-            echo "- Python"
-            echo "- JavaScript"
-            echo "- JSON"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
 
-     
       - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
           path: super-linter-output/
-          
