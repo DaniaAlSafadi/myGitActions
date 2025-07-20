@@ -33,42 +33,70 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          # Enable detailed output
-          LOG_LEVEL: VERBOSE
-          # Create detailed reports
+          # Enable detailed output and logging
+          LOG_LEVEL: DEBUG
           CREATE_LOG_FILE: true
+          ENABLE_GITHUB_ACTIONS_GROUP_TITLE: true
+          # Try to capture more output
+          ACTIONS_RUNNER_DEBUG: true
 
-      - name: 📋 Show linting errors if any
-        if: failure() && steps.linter.outcome == 'failure'
+      - name: 📋 Capture and Display Linting Errors
+        if: always()
         run: |
-          echo "::group::🚨 Linting Errors Found"
-          echo "The following files have linting issues:"
+          echo "::group::🔍 Super-Linter Output Discovery"
+          
+          # Look for the super-linter.log file that we know exists
+          echo "=== Looking for super-linter.log ==="
+          find . -name "super-linter.log" -type f 2>/dev/null || echo "super-linter.log not found in current directory"
+          find /home/runner -name "super-linter.log" -type f 2>/dev/null || echo "super-linter.log not found in /home/runner"
+          
+          # Look for all log files
           echo ""
+          echo "=== All .log files in workspace ==="
+          find . -name "*.log" -type f -ls 2>/dev/null || echo "No .log files found"
           
-          # Look for Super-Linter log files and display errors
-          if [ -d "super-linter-output" ]; then
-            echo "### JavaScript Linting Errors:"
-            if [ -f "super-linter-output/super-linter-JAVASCRIPT_STANDARD.log" ]; then
-              cat super-linter-output/super-linter-JAVASCRIPT_STANDARD.log | grep -E ":(error|warning):" || echo "No JavaScript errors found in log"
-            fi
-            
-            echo ""
-            echo "### Python Linting Errors:"
-            if [ -f "super-linter-output/super-linter-PYTHON.log" ]; then
-              cat super-linter-output/super-linter-PYTHON.log | grep -E ":(error|warning):" || echo "No Python errors found in log"
-            fi
-            
-            echo ""
-            echo "### JSON Linting Errors:"
-            if [ -f "super-linter-output/super-linter-JSON.log" ]; then
-              cat super-linter-output/super-linter-JSON.log | grep -E ":(error|warning):" || echo "No JSON errors found in log"
-            fi
-          fi
-          
-          # Also check the GitHub workspace for any error files
-          find /github/workspace -name "*.log" -type f -exec echo "=== {} ===" \; -exec cat {} \; 2>/dev/null || true
+          echo ""
+          echo "=== Checking for Super-Linter output directories ==="
+          ls -la /tmp/ | grep -i super || echo "No super-linter directories in /tmp"
+          ls -la . | grep -i super || echo "No super-linter directories in current path"
           
           echo "::endgroup::"
+          
+          if [ "${{ steps.linter.outcome }}" == "failure" ]; then
+            echo "::group::🚨 Displaying Linting Errors"
+            
+            # Try to read the super-linter.log file we know exists
+            if [ -f "super-linter.log" ]; then
+              echo "=== Contents of super-linter.log ==="
+              cat super-linter.log 2>/dev/null || echo "Could not read super-linter.log (permission issue)"
+            fi
+            
+            # Try to read it with sudo or different approach
+            if [ -f "/home/runner/work/myGitActions/myGitActions/super-linter.log" ]; then
+              echo ""
+              echo "=== Contents of super-linter.log (full path) ==="
+              cat "/home/runner/work/myGitActions/myGitActions/super-linter.log" 2>/dev/null || echo "Could not read super-linter.log from full path"
+            fi
+            
+            # Look for any files with linting error patterns
+            echo ""
+            echo "=== Searching for files with linting error patterns ==="
+            find . -type f \( -name "*.log" -o -name "*.txt" -o -name "*.out" \) -exec grep -l ":[0-9]*:[0-9]*:" {} \; 2>/dev/null | while read file; do
+              echo "=== Errors found in: $file ==="
+              grep ":[0-9]*:[0-9]*:" "$file" 2>/dev/null || true
+              echo ""
+            done
+            
+            # Check if there are any Super-Linter specific directories
+            for dir in /tmp/lint /tmp/super-linter /var/log; do
+              if [ -d "$dir" ]; then
+                echo "=== Contents of $dir ==="
+                find "$dir" -type f -exec echo "File: {}" \; -exec cat {} \; 2>/dev/null || true
+              fi
+            done
+            
+            echo "::endgroup::"
+          fi
 
       - name: 📝 Add Super-Linter Results to Summary
         if: always()
@@ -86,30 +114,41 @@ jobs:
             echo "Please fix the following issues:" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             
-            # Add error details to summary if available
-            if [ -d "super-linter-output" ]; then
-              echo "#### JavaScript Issues:" >> "$GITHUB_STEP_SUMMARY"
-              if [ -f "super-linter-output/super-linter-JAVASCRIPT_STANDARD.log" ]; then
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-                cat super-linter-output/super-linter-JAVASCRIPT_STANDARD.log | head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No JavaScript errors to display" >> "$GITHUB_STEP_SUMMARY"
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-              fi
-              
+            # Try to find and display actual error content from the super-linter.log file
+            ERROR_FOUND=false
+            
+            # First try to read the super-linter.log file directly
+            if [ -f "super-linter.log" ]; then
+              echo "#### Super-Linter Log Contents:" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              # Extract lines that look like linting errors (file:line:column format)
+              grep -E "\.(js|py|json):[0-9]+:[0-9]+:" "super-linter.log" 2>/dev/null >> "$GITHUB_STEP_SUMMARY" || echo "No formatted linting errors found in super-linter.log" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "#### Python Issues:" >> "$GITHUB_STEP_SUMMARY"
-              if [ -f "super-linter-output/super-linter-PYTHON.log" ]; then
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-                cat super-linter-output/super-linter-PYTHON.log | head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No Python errors to display" >> "$GITHUB_STEP_SUMMARY"
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-              fi
-              
+              ERROR_FOUND=true
+            elif [ -f "/home/runner/work/myGitActions/myGitActions/super-linter.log" ]; then
+              echo "#### Super-Linter Log Contents:" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              grep -E "\.(js|py|json):[0-9]+:[0-9]+:" "/home/runner/work/myGitActions/myGitActions/super-linter.log" 2>/dev/null >> "$GITHUB_STEP_SUMMARY" || echo "No formatted linting errors found" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "#### JSON Issues:" >> "$GITHUB_STEP_SUMMARY"
-              if [ -f "super-linter-output/super-linter-JSON.log" ]; then
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-                cat super-linter-output/super-linter-JSON.log | head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No JSON errors to display" >> "$GITHUB_STEP_SUMMARY"
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-              fi
+              ERROR_FOUND=true
+            fi
+            
+            # Also try to get any other error patterns
+            echo "#### Additional Error Information:" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            # Look for any files with the error pattern you showed
+            find . -type f -exec grep -l ":[0-9]*:[0-9]*:.*(" {} \; 2>/dev/null | head -5 | while read file; do
+              echo "Errors from $file:" >> "$GITHUB_STEP_SUMMARY"
+              grep ":[0-9]*:[0-9]*:.*(" "$file" 2>/dev/null | head -20 >> "$GITHUB_STEP_SUMMARY" || true
+            done 2>/dev/null || echo "No additional error patterns found" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            
+            # If no structured logs found, provide guidance
+            if [ "$ERROR_FOUND" = false ]; then
+              echo "#### Debug Information:" >> "$GITHUB_STEP_SUMMARY"
+              echo "Check the 'Capture and Display Linting Errors' step above for detailed error output." >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
           
@@ -119,15 +158,37 @@ jobs:
           echo "- JavaScript 📜" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON 📋" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: 📦 Copy logs before upload (fix permissions)
+        if: always()
+        run: |
+          echo "Copying log files to avoid permission issues..."
+          
+          # Create a clean directory for logs
+          mkdir -p ./logs-for-upload
+          
+          # Copy any log files we can find, fixing permissions
+          if [ -f "super-linter.log" ]; then
+            cp "super-linter.log" "./logs-for-upload/" 2>/dev/null || echo "Could not copy super-linter.log"
+          fi
+          
+          # Find and copy other log files
+          find . -name "*.log" -type f -exec cp {} "./logs-for-upload/" \; 2>/dev/null || true
+          
+          # Set proper permissions
+          chmod -R 644 ./logs-for-upload/ 2>/dev/null || true
+          
+          echo "Files prepared for upload:"
+          ls -la ./logs-for-upload/ || echo "No files to upload"
+
       - name: 📦 Upload Super-Linter Output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-output
+          name: super-linter-logs
           path: |
-            super-linter-output/
-            **/*.log
+            ./logs-for-upload/
           retention-days: 7
+          if-no-files-found: warn
 
       - name: 💬 Comment on PR with results
         if: always() && github.event_name == 'pull_request'
