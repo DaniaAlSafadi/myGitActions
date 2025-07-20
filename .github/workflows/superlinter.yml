@@ -1,4 +1,4 @@
-name: Super-Linter with Logs
+name: Super-Linter
 
 on:
   push:
@@ -14,35 +14,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: 🧹 Run Super-Linter in Docker and Save Logs
-        run: |
-          docker run \
-            -e RUN_LOCAL=true \
-            -e DEFAULT_BRANCH=main \
-            -e VALIDATE_JSON=true \
-            -e VALIDATE_PYTHON=true \
-            -e VALIDATE_JAVASCRIPT_STANDARD=true \
-            -v ${{ github.workspace }}:/tmp/lint \
-            github/super-linter:v7.1.0 > super-linter.log 2>&1
+      - name: 📁 Print repo structure
+        run: tree -L 3
 
-      - name: 📄 Show Linter Errors in Summary (if failed)
-        if: failure()
+      - name: 📄 List all checked out files
+        run: find . -type f
+
+      - name: 🧹 Run Super-Linter
+        uses: super-linter/super-linter@v7.1.0
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_JSON: true
+          VALIDATE_PYTHON: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
+
+      - name: 📝 Add Super-Linter Markdown Summary
+        if: always()
         run: |
-          echo "### ❌ Linter Errors Found" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Top 100 lines from super-linter.log:" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          head -n 100 super-linter.log >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📦 Upload Linter Log as Artifact
+      - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-logs
-          path: super-linter.log
+          name: super-linter-output
+          path: super-linter-output/
