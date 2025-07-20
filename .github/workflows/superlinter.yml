@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -34,29 +34,19 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
 
-      - name: 📦 Upload Super-Linter Output Artifact
+      - name: 📝 Add Super-Linter Markdown Summary
+        if: always()
+        run: |
+          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
           path: super-linter-output/
-
-      - name: 📝 Show Linter Errors in Summary (if any)
-        if: always()
-        run: |
-          echo "### ❌ Super-Linter Errors Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          # Check if artifact folder exists
-          if [ -d super-linter-output ]; then
-            # Find any report files and show first 100 lines of each
-            for file in super-linter-output/*; do
-              echo "#### File: $(basename "$file")" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              head -n 100 "$file" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-            done
-          else
-            echo "No Super-Linter output artifact found." >> "$GITHUB_STEP_SUMMARY"
-          fi
