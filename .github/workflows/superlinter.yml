@@ -25,7 +25,7 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-            - name: 🧹 Run Super-Linter via Docker and Save Logs
+      - name: 🧹 Run Super-Linter via Docker and Save Logs
         run: |
           docker run \
             -e RUN_LOCAL=true \
@@ -33,8 +33,9 @@ jobs:
             -e VALIDATE_JSON=true \
             -e VALIDATE_PYTHON=true \
             -e VALIDATE_JAVASCRIPT_STANDARD=true \
-            -v ${{ github.workspace }}:/tmp/lint \
+            -v "${{ github.workspace }}:/tmp/lint" \
             ghcr.io/github/super-linter:slim-v7 > super-linter.log 2>&1
+
 
       - name: 📝 Add Super-Linter Markdown Summary
         if: always()
