@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -25,28 +25,55 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🧹 Run Super-Linter
-        uses: super-linter/super-linter@v7.1.0
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JSON: true
-          VALIDATE_PYTHON: true
-          VALIDATE_JAVASCRIPT_STANDARD: true
+      - name: 🧹 Run Super-Linter via Docker and Save Logs
+        run: |
+          docker run \
+            -e RUN_LOCAL=true \
+            -e DEFAULT_BRANCH=main \
+            -e VALIDATE_JSON=true \
+            -e VALIDATE_PYTHON=true \
+            -e VALIDATE_JAVASCRIPT_STANDARD=true \
+            -v ${{ github.workspace }}:/tmp/lint \
+            github/super-linter:v7.1.0 > super-linter.log 2>&1
 
       - name: 📝 Add Super-Linter Markdown Summary
         if: always()
         run: |
-          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🧹 Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📦 Upload Super-Linter Artifact
+      - name: 📄 Show Linter Errors (if failed)
+        if: failure()
+        run: |
+          echo "### ❌ Linter Errors Found" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Top 100 lines from super-linter.log:" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -n 100 super-linter.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📂 Show Linted Files Extracted from Log
+        if: always()
+        run: |
+          echo "### 📄 Files Scanned by Super-Linter" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f super-linter.log ]; then
+            grep -Eo '/.*\.(js|py|json):' super-linter.log \
+              | sed 's|/github/workspace/||' \
+              | sed 's|:$||' \
+              | sort | uniq >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "super-linter.log not found." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📦 Upload Super-Linter Log as Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-output
-          path: super-linter-output/
+          name: super-linter-log
+          path: super-linter.log
