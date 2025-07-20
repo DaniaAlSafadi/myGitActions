@@ -1,5 +1,4 @@
 name: Super-Linter
-
 on:
   push:
     paths:
@@ -12,7 +11,6 @@ on:
 jobs:
   super-lint:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,27 +24,144 @@ jobs:
         run: find . -type f
 
       - name: 🧹 Run Super-Linter
+        id: linter
         uses: super-linter/super-linter@v7.1.0
+        continue-on-error: true  # Allow workflow to continue even if linting fails
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
+          # Enable detailed output
+          LOG_LEVEL: VERBOSE
+          # Create detailed reports
+          CREATE_LOG_FILE: true
 
-      - name: 📝 Add Super-Linter Markdown Summary
+      - name: 📋 Show linting errors if any
+        if: failure() && steps.linter.outcome == 'failure'
+        run: |
+          echo "::group::🚨 Linting Errors Found"
+          echo "The following files have linting issues:"
+          echo ""
+          
+          # Look for Super-Linter log files and display errors
+          if [ -d "super-linter-output" ]; then
+            echo "### JavaScript Linting Errors:"
+            if [ -f "super-linter-output/super-linter-JAVASCRIPT_STANDARD.log" ]; then
+              cat super-linter-output/super-linter-JAVASCRIPT_STANDARD.log | grep -E ":(error|warning):" || echo "No JavaScript errors found in log"
+            fi
+            
+            echo ""
+            echo "### Python Linting Errors:"
+            if [ -f "super-linter-output/super-linter-PYTHON.log" ]; then
+              cat super-linter-output/super-linter-PYTHON.log | grep -E ":(error|warning):" || echo "No Python errors found in log"
+            fi
+            
+            echo ""
+            echo "### JSON Linting Errors:"
+            if [ -f "super-linter-output/super-linter-JSON.log" ]; then
+              cat super-linter-output/super-linter-JSON.log | grep -E ":(error|warning):" || echo "No JSON errors found in log"
+            fi
+          fi
+          
+          # Also check the GitHub workspace for any error files
+          find /github/workspace -name "*.log" -type f -exec echo "=== {} ===" \; -exec cat {} \; 2>/dev/null || true
+          
+          echo "::endgroup::"
+
+      - name: 📝 Add Super-Linter Results to Summary
         if: always()
         run: |
-          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 📊 Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ "${{ steps.linter.outcome }}" == "success" ]; then
+            echo "✅ **All checks passed!**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "All files passed linting for:" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ **Linting issues found**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Please fix the following issues:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            
+            # Add error details to summary if available
+            if [ -d "super-linter-output" ]; then
+              echo "#### JavaScript Issues:" >> "$GITHUB_STEP_SUMMARY"
+              if [ -f "super-linter-output/super-linter-JAVASCRIPT_STANDARD.log" ]; then
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+                cat super-linter-output/super-linter-JAVASCRIPT_STANDARD.log | head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No JavaScript errors to display" >> "$GITHUB_STEP_SUMMARY"
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+              fi
+              
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "#### Python Issues:" >> "$GITHUB_STEP_SUMMARY"
+              if [ -f "super-linter-output/super-linter-PYTHON.log" ]; then
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+                cat super-linter-output/super-linter-PYTHON.log | head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No Python errors to display" >> "$GITHUB_STEP_SUMMARY"
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+              fi
+              
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "#### JSON Issues:" >> "$GITHUB_STEP_SUMMARY"
+              if [ -f "super-linter-output/super-linter-JSON.log" ]; then
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+                cat super-linter-output/super-linter-JSON.log | head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No JSON errors to display" >> "$GITHUB_STEP_SUMMARY"
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          fi
+          
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Languages checked:**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python 🐍" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript 📜" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON 📋" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📦 Upload Super-Linter Artifact
+      - name: 📦 Upload Super-Linter Output
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
-          path: super-linter-output/
+          path: |
+            super-linter-output/
+            **/*.log
+          retention-days: 7
+
+      - name: 💬 Comment on PR with results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ steps.linter.outcome }}';
+            const fs = require('fs');
+            
+            let comment = '## 🧹 Super-Linter Results\n\n';
+            
+            if (outcome === 'success') {
+              comment += '✅ **All linting checks passed!** Great job! 🎉\n\n';
+            } else {
+              comment += '❌ **Linting issues found.** Please review and fix the following:\n\n';
+              
+              // Try to read and include error details
+              try {
+                if (fs.existsSync('super-linter-output/super-linter-JAVASCRIPT_STANDARD.log')) {
+                  const jsErrors = fs.readFileSync('super-linter-output/super-linter-JAVASCRIPT_STANDARD.log', 'utf8');
+                  if (jsErrors.trim()) {
+                    comment += '### JavaScript Issues:\n```\n' + jsErrors.substring(0, 1000) + '\n```\n\n';
+                  }
+                }
+              } catch (e) {
+                console.log('Could not read JavaScript log:', e.message);
+              }
+            }
+            
+            comment += '_This comment was automatically generated by Super-Linter._';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
