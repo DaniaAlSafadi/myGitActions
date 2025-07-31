@@ -52,8 +52,8 @@ jobs:
           path: super-linter-output/
 
   eslint-reviewdog:
+    needs: super-lint
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' # Only run on PRs
 
     steps:
       - name: Checkout code

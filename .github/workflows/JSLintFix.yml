@@ -12,6 +12,10 @@ jobs:
     environment:
       name: lint-approval
 
+    strategy:
+      matrix:
+        folder: [API-Build, test_debug_js.js]  
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,24 +25,21 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: |
-          cd API-Build
-          npm install
+      - name: Install dependencies in ${{ matrix.folder }}
+        run: npm install
+        working-directory: ${{ matrix.folder }}
 
-      - name: Lint and auto-fix all JS files in API-Build
-        run: |
-          cd API-Build
-          npx standard --fix "./**/*.js"
+      - name: Lint and auto-fix JS in ${{ matrix.folder }}
+        run: npx standard --fix "./**/*.js"
+        working-directory: ${{ matrix.folder }}
 
-      - name: Commit and push changes
+      - name: Commit and push changes (if any)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add API-Build
+          git add ${{ matrix.folder }}
           if ! git diff --cached --quiet; then
-            git commit -m "chore: auto-fix JS via GitHub Actions"
+            git commit -m "chore: auto-fix JS in ${{ matrix.folder }} via GitHub Actions"
             git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           else
             echo "No changes to commit."
-          fi
