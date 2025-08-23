@@ -108,3 +108,8 @@ jobs:
             echo "✅ No disallowed keywords found."
             echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
           fi
+            - name: Upload keyword scan report
+              uses: actions/upload-artifact@v4
+              with:
+                name: keyword-scan-report
+                path: keyword-scan-output/
