@@ -39,8 +39,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-output
-          path: super-linter-output/
+          name: super-linter-report
+          path: super-linter-report/
 
   detect-keywords:
     name: Detect `console.log` or `print`
@@ -107,3 +107,12 @@ jobs:
             echo "✅ No disallowed keywords found."
             echo -e "\n✅ No disallowed keywords found." >> $GITHUB_STEP_SUMMARY
           fi
+
+          - name: 📦 Upload Keyword Scan Results
+            if: always()
+            uses: actions/upload-artifact@v4
+            with:
+             name: keyword-scan-report
+             path: keyword-scan-report/
+
+ 
