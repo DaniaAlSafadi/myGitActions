@@ -9,52 +9,43 @@ on:
   pull_request:
   workflow_dispatch:
 
-- name: 🧹 Run Super-Linter
-        id: superlint
-        uses: super-linter/super-linter@v7.0.0
+jobs:
+  super-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: 📁 Print repo structure
+        run: tree -L 3
+
+      - name: 📄 List all checked out files
+        run: find . -type f
+
+      - name: 🧹 Run Super-Linter
+        uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-        continue-on-error: true  # ✅ prevent workflow from stopping on errors
 
-      - name: 📄 Save Super-Linter logs
+      - name: 📝 Add Super-Linter Markdown Summary
+        if: always()
         run: |
-          mkdir -p super-linter-output
-          cp ${{ runner.temp }}/super-linter.log super-linter-output/lint.log || echo "No log file found"
+          echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
 
-          SUMMARY_FILE=super-linter-output/super-linter-summary.md
-          echo "------# Super-linter summary" > "$SUMMARY_FILE"
-          echo "" >> "$SUMMARY_FILE"
-          echo "| Language            | Validation result |" >> "$SUMMARY_FILE"
-          echo "| ------------------- | ----------------- |" >> "$SUMMARY_FILE"
-
-          # Add pass/fail checks
-          if grep -q "JAVASCRIPT_STANDARD" super-linter-output/lint.log && grep -q "error" super-linter-output/lint.log; then
-            echo "| JAVASCRIPT_STANDARD | Fail ❌           |" >> "$SUMMARY_FILE"
-          else
-            echo "| JAVASCRIPT_STANDARD | Pass ✅           |" >> "$SUMMARY_FILE"
-          fi
-
-          if grep -q "JSON" super-linter-output/lint.log && grep -q "error" super-linter-output/lint.log; then
-            echo "| JSON                | Fail ❌           |" >> "$SUMMARY_FILE"
-          else
-            echo "| JSON                | Pass ✅           |" >> "$SUMMARY_FILE"
-          fi
-
-          if grep -q "PYTHON" super-linter-output/lint.log && grep -q "error" super-linter-output/lint.log; then
-            echo "| PYTHON              | Fail ❌           |" >> "$SUMMARY_FILE"
-          else
-            echo "| PYTHON              | Pass ✅           |" >> "$SUMMARY_FILE"
-          fi
-
-          echo "" >> "$SUMMARY_FILE"
-          echo "### Detailed Logs" >> "$SUMMARY_FILE"
-          cat super-linter-output/lint.log >> "$SUMMARY_FILE"
-
-      - name: 📦 Upload Artifact
+      - name: 📦 Upload Super-Linter Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
