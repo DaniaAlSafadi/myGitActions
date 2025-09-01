@@ -25,8 +25,15 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🧹 Run Super-Linter
-        uses: super-linter/super-linter@v7.1.0
+      - name: 🧹 Run Super-Linter and Save Output
+        id: lint
+        run: |
+          mkdir -p super-linter-output
+          # Run linter and capture stdout + stderr to a markdown file
+          npx super-linter \
+            --disable-errors false \
+            --log-level INFO \
+            2>&1 | tee super-linter-output/lint-results.md
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,10 +50,12 @@ jobs:
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "See detailed results in the artifact **super-linter-output/lint-results.md**" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-output
-          path: super-linter-output/
+          path: super-linter-output/lint-results.md
