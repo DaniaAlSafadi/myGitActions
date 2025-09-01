@@ -24,7 +24,7 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_ALL_CODEBASE: false 
+          VALIDATE_ALL_CODEBASE: true 
           JAVASCRIPT_ES_CONFIG_FILE: .eslintrc.json
           
       - name: 📝 Add Super-Linter Markdown Summary
