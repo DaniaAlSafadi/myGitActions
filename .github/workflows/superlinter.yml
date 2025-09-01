@@ -1,14 +1,3 @@
-name: Super-Linter
-
-on:
-  push:
-    paths:
-      - '.github/workflows/superlinter.yml'
-      - 'library/books.json'
-      - 'API-Build/routes/subscribers.js'
-  pull_request:
-  workflow_dispatch:
-
 jobs:
   super-lint:
     runs-on: ubuntu-latest
@@ -19,39 +8,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📁 Print repo structure
-        run: tree -L 3
-
-      - name: 📄 List all checked out files
-        run: find . -type f
-
-      - name: 🧹 Run Super-Linter and Save Output
+      - name: 🧹 Run Super-Linter and Capture Output
         id: lint
         run: |
           mkdir -p super-linter-output
-          # Run linter and capture stdout + stderr to a markdown file
-          npx super-linter \
-            --disable-errors false \
-            --log-level INFO \
-            2>&1 | tee super-linter-output/lint-results.md
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JSON: true
-          VALIDATE_PYTHON: true
-          VALIDATE_JAVASCRIPT_STANDARD: true
+          # Run the super-linter action's docker image directly
+          docker run \
+            -e DEFAULT_BRANCH=main \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e VALIDATE_JSON=true \
+            -e VALIDATE_PYTHON=true \
+            -e VALIDATE_JAVASCRIPT_STANDARD=true \
+            -v ${{ github.workspace }}:/tmp/lint \
+            github/super-linter:v7.1.0 2>&1 | tee super-linter-output/lint-results.md
 
       - name: 📝 Add Super-Linter Markdown Summary
         if: always()
         run: |
           echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "See detailed results in the artifact **super-linter-output/lint-results.md**" >> "$GITHUB_STEP_SUMMARY"
+          echo "See detailed results in the artifact **lint-results.md**" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Artifact
         if: always()
