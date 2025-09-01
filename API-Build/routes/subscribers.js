@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const Subscriber = require('../models/subscriber')
 
-console.log("🎯 Let's try a new action")
+consol.log("🎯 Let's try a new action")
 console.log('😅 You caught me! Detected a console.log in the code!')
 console.log('🚨 Heads up! Found a console.log that slipped through!')
 console.log('----')
