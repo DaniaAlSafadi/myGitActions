@@ -1,3 +1,14 @@
+name: Super-Linter
+
+on:
+  push:
+    paths:
+      - '.github/workflows/superlinter.yml'
+      - 'library/books.json'
+      - 'API-Build/routes/subscribers.js'
+  pull_request:
+  workflow_dispatch:
+
 jobs:
   super-lint:
     runs-on: ubuntu-latest
