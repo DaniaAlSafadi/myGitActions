@@ -41,6 +41,21 @@ jobs:
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
 
+      - name: 📌 Display Linter Errors
+        if: always()
+        run: |
+          echo "### Super-Linter Errors (if any)"
+          echo ""
+          if [ -d "/tmp/lint" ]; then
+            find /tmp/lint -name "*.log" -type f | while read -r logfile; do
+              echo "=== $(basename "$logfile") ==="
+              grep "\[ERROR\]" "$logfile" || echo "No errors found in $logfile"
+              echo ""
+            done
+          else
+            echo "No linter logs found."
+          fi
+
       - name: 📝 Generate Step Summary
         if: always()
         run: |
@@ -55,7 +70,6 @@ jobs:
           # Show top logs from /tmp/lint
           echo "#### Linter Results" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-
           if [ -d "/tmp/lint" ]; then
             find /tmp/lint -name "*.log" -type f | head -10 | while read -r logfile; do
               echo "=== $(basename "$logfile") ===" >> "$GITHUB_STEP_SUMMARY"
@@ -63,24 +77,6 @@ jobs:
               echo "" >> "$GITHUB_STEP_SUMMARY"
             done
           fi
-
-          # Check SARIF file
-          if [ -f "super-linter.sarif" ]; then
-            echo "📊 SARIF Results:" >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.runs[]?.results[]? | "❌ \(.ruleId // "unknown"): \(.message.text) (File: \(.locations[0]?.physicalLocation?.artifactLocation?.uri // "unknown"))"' super-linter.sarif 2>/dev/null | head -20 >> "$GITHUB_STEP_SUMMARY" || echo "Could not parse SARIF file" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "ℹ️ No SARIF file generated" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          # Additional log files in workspace
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "📋 Checking workspace for additional logs..." >> "$GITHUB_STEP_SUMMARY"
-          find . -name "*lint*.log" -o -name "*error*.log" 2>/dev/null | head -5 | while read -r logfile; do
-            echo "--- $logfile ---" >> "$GITHUB_STEP_SUMMARY"
-            cat "$logfile" | tail -10 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Could not read $logfile" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          done
-
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
