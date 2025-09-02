@@ -1,10 +1,7 @@
 name: Super-Linter
+
 on:
   push:
- #   paths:
- #     - '.github/workflows/superlinter.yml'
- #     - 'library/books.json'
- #     - 'API-Build/routes/subscribers.js'
   pull_request:
   workflow_dispatch:
 
@@ -12,6 +9,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
+  security-events: write
 
 jobs:
   super-lint:
@@ -22,27 +20,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📁 Print repo structure
-        run: tree -L 3 || echo "tree not installed"
+      - name: 🧹 Prepare Super-Linter output folder
+        run: mkdir -p super-linter-output
 
-      - name: 📄 List all checked out files
-        run: find . -type f
+      - name: 🧹 Run Super-Linter
+        uses: github/super-linter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true
+          VALIDATE_JSON: true
+          VALIDATE_PYTHON_BLACK: true
+          VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
+          OUTPUT_FORMAT: sarif
+          OUTPUT_FILE: super-linter-output/results.sarif
+          CREATE_LOG_FILE: true
+          LOG_LEVEL: VERBOSE
 
-      - name: 🧹 Run Super-Linter with Direct Output Capture
-        continue-on-error: true
+      - name: 📝 Parse and Display Linter Errors
+        if: always()
         run: |
-          # Run Super-Linter using Docker directly to capture all output
-          docker run --rm \
-            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e VALIDATE_ALL_CODEBASE=true \
-            -e VALIDATE_JSON=true \
-            -e VALIDATE_PYTHON_BLACK=true \
-            -e VALIDATE_PYTHON_PYLINT=true \
-            -e VALIDATE_JAVASCRIPT_STANDARD=true \
-            -e DEFAULT_BRANCH=main \
-            -v "${{ github.workspace }}":/tmp/lint \
-            ghcr.io/super-linter/super-linter:v5.7.2 > full_output.log 2>&1 || true
-          
           echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
@@ -50,33 +47,33 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Linter Errors Found" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          
-          # Extract clean error lines from the output
-          # Remove ANSI colors and extract file:line:col: error format
-          sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' full_output.log | \
-          grep -E "^[[:space:]]*/.*\.(js|py|json):[0-9]+:[0-9]+:" | \
-          sed 's/^[[:space:]]*//' | \
-          sort -u | \
-          head -50 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
-          
-          # If no errors in that format, try broader search
-          if ! grep -q "/.*\.js:[0-9]" "$GITHUB_STEP_SUMMARY" 2>/dev/null; then
-            echo "Searching for alternative error formats..." >> "$GITHUB_STEP_SUMMARY"
-            sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' full_output.log | \
-            grep -E "\.(js|py|json)" | \
-            grep -E ":[0-9]+:" | \
-            grep -v "INFO\|DEBUG\|Linting\|Found files" | \
-            head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
-          fi
-          
+
+          echo "#### Linter Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📦 Upload Full Output Log
+          SARIF_FILE="super-linter-output/results.sarif"
+          if [ -f "$SARIF_FILE" ]; then
+            # Extract only errors/warnings from SARIF
+            jq -r '.runs[]?.results[]? | "\(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine):\(.locations[0].physicalLocation.region.startColumn): \(.message.text) (\(.ruleId))"' "$SARIF_FILE" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ℹ️ No SARIF file found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📊 Upload SARIF report to GitHub Code Scanning
+        if: always() && hashFiles('super-linter-output/results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: super-linter-output/results.sarif
+
+      - name: 📦 Upload Super-Linter Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-full-output
-          path: full_output.log
+          name: super-linter-logs
+          path: |
+            super-linter-output/
+            *.log
           if-no-files-found: ignore
