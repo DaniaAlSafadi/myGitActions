@@ -40,12 +40,15 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
+          SARIF_REPORTER: true  # optional but recommended
 
+      # --- Option 1: Display only errors in UI ---
       - name: 📌 Display Linter Errors
         if: always()
         run: |
           echo "### Super-Linter Errors (if any)"
           echo ""
+          # Check /tmp/lint logs
           if [ -d "/tmp/lint" ]; then
             find /tmp/lint -name "*.log" -type f | while read -r logfile; do
               echo "=== $(basename "$logfile") ==="
@@ -56,13 +59,14 @@ jobs:
             echo "No linter logs found."
           fi
 
+      # --- Option 2: Generate Step Summary ---
       - name: 📝 Generate Step Summary
         if: always()
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python (Black, Pylint)" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -73,6 +77,7 @@ jobs:
           if [ -d "/tmp/lint" ]; then
             find /tmp/lint -name "*.log" -type f | head -10 | while read -r logfile; do
               echo "=== $(basename "$logfile") ===" >> "$GITHUB_STEP_SUMMARY"
+              # Show last 20 lines, including errors
               tail -20 "$logfile" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Could not read $logfile" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
             done
