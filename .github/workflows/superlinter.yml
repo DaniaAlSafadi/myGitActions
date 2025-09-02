@@ -26,6 +26,7 @@ jobs:
         run: find . -type f
 
       - name: 🧹 Run Super-Linter
+        id: lint
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
@@ -33,10 +34,9 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          DISABLE_ERRORS: false          # ⬅️ fail if errors exist
           OUTPUT_DETAILS: detailed
-          OUTPUT_FORMAT: tap
-          OUTPUT_FILE: super-linter-output/results.tap
+          OUTPUT_FORMAT: sarif
+          OUTPUT_FILE: super-linter-output/results.sarif
 
       - name: 📝 Add Super-Linter Markdown Summary
         if: always()
@@ -51,12 +51,18 @@ jobs:
 
           echo "#### Linter Errors Found" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          if [ -f super-linter-output/results.tap ]; then
-            grep -i "not ok" super-linter-output/results.tap || echo "✅ No errors found" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f super-linter-output/results.sarif ]; then
+            jq '.runs[].results[]?.message.text' super-linter-output/results.sarif || echo "✅ No errors found" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "⚠️ No linter output file found" >> "$GITHUB_STEP_SUMMARY"
+            echo "⚠️ No SARIF file found, linter may have failed" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📊 Upload SARIF report to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: super-linter-output/results.sarif
 
       - name: 📦 Upload Super-Linter Artifact
         if: always()
