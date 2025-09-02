@@ -30,17 +30,27 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🧹 Run Super-Linter
-        uses: super-linter/super-linter@v5.7.2
+      - name: 🧹 Run Super-Linter (official action)
+        uses: github/super-linter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_JSON: true
-          VALIDATE_PYTHON_BLACK: true
-          VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
+
+      - name: 📌 Save Linter Errors to File
+        if: always()
+        run: |
+          # Filter [ERROR] lines from super-linter.log
+          if [ -f super-linter.log ]; then
+            grep "\[ERROR\]" super-linter.log > super-linter-errors.log || echo "No errors found"
+          else
+            echo "No super-linter.log found"
+            touch super-linter-errors.log
+          fi
 
       - name: 📝 Generate Step Summary
         if: always()
@@ -48,42 +58,20 @@ jobs:
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python (Black, Pylint)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # Check for log files and display last lines
-          echo "#### Linter Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Preview of Linter Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          if [ -d "/tmp/lint" ]; then
-            find /tmp/lint -name "*.log" -type f | head -10 | while read -r logfile; do
-              echo "=== $(basename "$logfile") ===" >> "$GITHUB_STEP_SUMMARY"
-              tail -20 "$logfile" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Could not read $logfile" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-            done
+          if [ -s super-linter-errors.log ]; then
+            # Show only first 50 lines in UI summary
+            head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "No linter logs found." >> "$GITHUB_STEP_SUMMARY"
+            echo "No errors found" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-          # Check for SARIF file
-          if [ -f "super-linter.sarif" ]; then
-            echo "📊 SARIF Results:" >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.runs[]?.results[]? | "❌ \(.ruleId // "unknown"): \(.message.text) (File: \(.locations[0]?.physicalLocation?.artifactLocation?.uri // "unknown"))"' super-linter.sarif 2>/dev/null | head -20 >> "$GITHUB_STEP_SUMMARY" || echo "Could not parse SARIF file" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "ℹ️ No SARIF file generated" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          # Also check workspace for additional logs
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "📋 Checking workspace for additional logs..." >> "$GITHUB_STEP_SUMMARY"
-          find . -name "*lint*.log" -o -name "*error*.log" 2>/dev/null | head -5 | while read -r logfile; do
-            echo "--- $logfile ---" >> "$GITHUB_STEP_SUMMARY"
-            cat "$logfile" | tail -10 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Could not read $logfile" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          done
-
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
 
@@ -93,13 +81,13 @@ jobs:
         with:
           sarif_file: super-linter.sarif
 
-      - name: 📦 Upload Super-Linter Logs
+      - name: 📦 Upload Super-Linter Logs and Errors
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-logs
           path: |
-            /tmp/lint/
+            super-linter.log
+            super-linter-errors.log
             super-linter.sarif
-            *.log
           if-no-files-found: ignore
