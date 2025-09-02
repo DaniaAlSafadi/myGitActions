@@ -13,7 +13,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write
+  security-events: write  # Required for SARIF upload
 
 jobs:
   super-lint:
@@ -30,34 +30,21 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🧹 Run Super-Linter (custom Docker)
-        run: |
-          docker run --rm \
-            -e VALIDATE_ALL_CODEBASE=true \
-            -e VALIDATE_JSON=true \
-            -e VALIDATE_PYTHON=true \
-            -e VALIDATE_JAVASCRIPT_STANDARD=true \
-            -e CREATE_LOG_FILE=true \
-            -e LOG_LEVEL=VERBOSE \
-            -v "$GITHUB_WORKSPACE":/github/workspace \
-            github/super-linter:v8.1.0 \
-            2>&1 | tee super-linter.log
-
-      - name: 📌 Display Linter Errors
-        if: always()
-        run: |
-          echo "### Super-Linter Errors (if any)" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f "super-linter.log" ]; then
-            grep "\[ERROR\]" super-linter.log >> "$GITHUB_STEP_SUMMARY" || echo "No errors found."
-          else
-            echo "No linter log found." >> "$GITHUB_STEP_SUMMARY"
-          fi
+      - name: 🧹 Run Super-Linter
+        uses: super-linter/super-linter@v5.7.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true
+          VALIDATE_JSON: true
+          VALIDATE_PYTHON_BLACK: true
+          VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
+          CREATE_LOG_FILE: true
+          LOG_LEVEL: VERBOSE
 
       - name: 📝 Generate Step Summary
         if: always()
         run: |
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
@@ -65,7 +52,46 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Check for log files and display last lines
+          echo "#### Linter Results" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if [ -d "/tmp/lint" ]; then
+            find /tmp/lint -name "*.log" -type f | head -10 | while read -r logfile; do
+              echo "=== $(basename "$logfile") ===" >> "$GITHUB_STEP_SUMMARY"
+              tail -20 "$logfile" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Could not read $logfile" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "No linter logs found." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # Check for SARIF file
+          if [ -f "super-linter.sarif" ]; then
+            echo "📊 SARIF Results:" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.runs[]?.results[]? | "❌ \(.ruleId // "unknown"): \(.message.text) (File: \(.locations[0]?.physicalLocation?.artifactLocation?.uri // "unknown"))"' super-linter.sarif 2>/dev/null | head -20 >> "$GITHUB_STEP_SUMMARY" || echo "Could not parse SARIF file" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ℹ️ No SARIF file generated" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Also check workspace for additional logs
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "📋 Checking workspace for additional logs..." >> "$GITHUB_STEP_SUMMARY"
+          find . -name "*lint*.log" -o -name "*error*.log" 2>/dev/null | head -5 | while read -r logfile; do
+            echo "--- $logfile ---" >> "$GITHUB_STEP_SUMMARY"
+            cat "$logfile" | tail -10 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Could not read $logfile" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📊 Upload SARIF report to GitHub Code Scanning
+        if: always() && hashFiles('super-linter.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: super-linter.sarif
 
       - name: 📦 Upload Super-Linter Logs
         if: always()
@@ -73,5 +99,7 @@ jobs:
         with:
           name: super-linter-logs
           path: |
-            super-linter.log
+            /tmp/lint/
+            super-linter.sarif
+            *.log
           if-no-files-found: ignore
