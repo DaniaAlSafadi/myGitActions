@@ -2,10 +2,10 @@ name: Super-Linter
 
 on:
   push:
-    paths:
-      - '.github/workflows/superlinter.yml'
-      - 'library/books.json'
-      - 'API-Build/routes/subscribers.js'
+ #   paths:
+ #     - '.github/workflows/superlinter.yml'
+ #     - 'library/books.json'
+ #     - 'API-Build/routes/subscribers.js'
   pull_request:
   workflow_dispatch:
 
@@ -34,17 +34,16 @@ jobs:
         run: mkdir -p super-linter-output
 
       - name: 🧹 Run Super-Linter
-        id: lint
-        uses: super-linter/super-linter@v7.1.0
+        uses: github/super-linter@v5  # Use stable GitHub version
         env:
-          DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true       # Lint all files, not just changed ones
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
-          OUTPUT_DETAILS: detailed
           OUTPUT_FORMAT: sarif
           OUTPUT_FILE: super-linter-output/results.sarif
+          LOG_LEVEL: debug                  # Show detailed logs to see what runs
 
       - name: 📝 Add Super-Linter Markdown Summary
         if: always()
