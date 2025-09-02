@@ -22,21 +22,20 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
         
-      - name: 🧹 Run Super-Linter
-        id: super-linter
-        continue-on-error: true  # Don't fail the workflow on linting errors
-        uses: super-linter/super-linter@v7.1.0
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JSON: true
-          VALIDATE_PYTHON: true
-          VALIDATE_JAVASCRIPT_STANDARD: true
-          CREATE_LOG_FILE: true
-          
-      - name: 📝 Display Linting Results
-        if: always()
+      - name: 🧹 Run Super-Linter and Capture Output
+        continue-on-error: true
         run: |
+          # Run Super-Linter and capture all output
+          docker run \
+            -e DEFAULT_BRANCH=main \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            -e VALIDATE_JSON=true \
+            -e VALIDATE_PYTHON=true \
+            -e VALIDATE_JAVASCRIPT_STANDARD=true \
+            -v "${{ github.workspace }}":/tmp/lint \
+            ghcr.io/super-linter/super-linter:v7.1.0 > linter_output.txt 2>&1 || true
+          
+          # Display the output in GitHub Step Summary
           echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
@@ -44,62 +43,18 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Linter Results" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
           
-          if [ "${{ steps.super-linter.outcome }}" = "failure" ]; then
-            echo "#### ❌ Linter Errors Found" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "#### ✅ No Linting Errors" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          # Show errors and warnings from the output
+          grep -E "(\.js:|\.py:|\.json:|ERROR|WARN|FAIL)" linter_output.txt | head -100 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No linting issues found" >> "$GITHUB_STEP_SUMMARY"
           
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           
-          # Look for Super-Linter log files and display errors
-          find /github/workspace -name "*.log" 2>/dev/null | while read logfile; do
-            if [ -s "$logfile" ] && grep -q "ERROR\|WARN\|:" "$logfile" 2>/dev/null; then
-              echo "=== Errors from $(basename "$logfile") ===" >> "$GITHUB_STEP_SUMMARY"
-              grep -E "(ERROR|WARN|\.js:|\.py:|\.json:)" "$logfile" | head -50 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          done
-          
-          # Also check standard Super-Linter output locations
-          for log_location in "/tmp/lint" "/github/workspace/super-linter.log" "/tmp/super-linter.log"; do
-            if [ -d "$log_location" ]; then
-              find "$log_location" -name "*.log" -type f | while read logfile; do
-                if [ -s "$logfile" ]; then
-                  echo "=== $(basename "$logfile") ===" >> "$GITHUB_STEP_SUMMARY"
-                  cat "$logfile" | grep -E "(\.js:|\.py:|\.json:|ERROR|WARN)" | head -30 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
-                  echo "" >> "$GITHUB_STEP_SUMMARY"
-                fi
-              done
-            elif [ -f "$log_location" ]; then
-              echo "=== Super-Linter Output ===" >> "$GITHUB_STEP_SUMMARY"
-              cat "$log_location" | grep -E "(\.js:|\.py:|\.json:|ERROR|WARN)" | head -30 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          done
-          
-          # If no specific errors found, show last few lines of any log
-          if ! grep -q "ERROR\|WARN\|\.js:" "$GITHUB_STEP_SUMMARY" 2>/dev/null; then
-            echo "No specific errors found in logs. Showing recent log output:" >> "$GITHUB_STEP_SUMMARY"
-            find /github/workspace /tmp -name "*.log" -type f 2>/dev/null | head -3 | while read logfile; do
-              if [ -s "$logfile" ]; then
-                echo "--- Last 20 lines from $(basename "$logfile") ---" >> "$GITHUB_STEP_SUMMARY"
-                tail -20 "$logfile" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
-                echo "" >> "$GITHUB_STEP_SUMMARY"
-              fi
-            done
-          fi
-          
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          
-      - name: 📦 Upload Super-Linter Logs
+      - name: 📦 Upload Linter Output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-logs
-          path: |
-            /tmp/lint/
-            /github/workspace/*.log
-            /tmp/*.log
+          name: linter-output
+          path: linter_output.txt
           if-no-files-found: ignore
