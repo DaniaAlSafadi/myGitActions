@@ -24,7 +24,7 @@ jobs:
         
       - name: 🧹 Run Super-Linter
         id: super-linter
-        continue-on-error: true  # Don't fail the workflow on linting errors
+        continue-on-error: true
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
@@ -34,7 +34,7 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
           
-      - name: 📝 Display Linting Results
+      - name: 📝 Display Clean Linting Errors
         if: always()
         run: |
           echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
@@ -53,34 +53,21 @@ jobs:
           
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           
-          # Look for actual linting errors (lines with file paths and error messages)
-          found_errors=false
-          
-          # Check common Super-Linter log locations
-          for log_location in "/tmp/lint" "/github/workspace" "/tmp"; do
-            if [ -d "$log_location" ]; then
-              find "$log_location" -name "*.log" -type f 2>/dev/null | while read logfile; do
-                if [ -s "$logfile" ]; then
-                  # Extract clean error lines that match the format: /path/file.ext:line:col: message (rule)
-                  grep -E "^\s*/.*\.(js|py|json):[0-9]+:[0-9]+:" "$logfile" 2>/dev/null | while read error_line; do
-                    echo "$error_line" >> "$GITHUB_STEP_SUMMARY"
-                    found_errors=true
-                  done
-                fi
-              done
+          # Extract only clean error lines in the format: /path/file.ext:line:col: message (rule)
+          find /tmp /github/workspace -name "*.log" -type f 2>/dev/null | while read logfile; do
+            if [ -s "$logfile" ]; then
+              # Match the exact format you want
+              sed -n 's/.*\(\/[^:]*\.[^:]*:[0-9]*:[0-9]*:.*\)/\1/p' "$logfile" 2>/dev/null | \
+              grep -E "\.(js|py|json):[0-9]+:[0-9]+:" | \
+              head -50
             fi
-          done
+          done >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
           
-          # If no formatted errors found, look for any lines containing file paths with errors
-          if [ "$found_errors" = false ]; then
-            find /tmp /github/workspace -name "*.log" -type f 2>/dev/null | head -5 | while read logfile; do
-              if [ -s "$logfile" ]; then
-                # Look for lines that contain file paths and common error indicators
-                grep -E "/.*\.(js|py|json).*(\(|:).*(\)|$)" "$logfile" 2>/dev/null | \
-                grep -v "RUN_LOCAL\|Linting\|Found\|Processing" | \
-                head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
-              fi
-            done
+          # Fallback: if no formatted errors, show any line with file:line:col pattern
+          if ! grep -q "\.js:[0-9]" "$GITHUB_STEP_SUMMARY" 2>/dev/null; then
+            find /tmp /github/workspace -name "*.log" -type f 2>/dev/null | while read logfile; do
+              grep -E "\.js:[0-9]+:[0-9]+:|\.py:[0-9]+:[0-9]+:|\.json:[0-9]+:[0-9]+:" "$logfile" 2>/dev/null | head -30
+            done >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
           fi
           
           echo '```' >> "$GITHUB_STEP_SUMMARY"
