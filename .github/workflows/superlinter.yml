@@ -26,6 +26,7 @@ jobs:
         run: find . -type f
 
       - name: 🧹 Run Super-Linter
+        id: lint
         uses: super-linter/super-linter@v7.1.0
         env:
           DEFAULT_BRANCH: main
@@ -43,6 +44,11 @@ jobs:
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "#### JavaScript Errors (if any)" >> "$GITHUB_STEP_SUMMARY"
+          # grab only the error lines for JAVASCRIPT_STANDARD
+          grep "subscribers.js" /github/workspace/super-linter.log || echo "✅ No errors found" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Artifact
         if: always()
