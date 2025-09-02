@@ -9,7 +9,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write  # Required for SARIF upload
+  security-events: write # Required for SARIF upload
 
 jobs:
   super-lint:
@@ -32,17 +32,30 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_JSON: true
+          VALIDATE_PYTHON_BLACK: true
+          VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
 
-      - name: 📌 Save Real Linter Errors to File
+      - name: 📌 Save Linter Errors to File
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            # Extract only file:line style error messages (ignoring INFO/DEBUG)
-            grep -E "^[^ ]+:[0-9]+:[0-9]+:" super-linter.log > super-linter-errors.log || echo "No errors found"
+            # Extract [ERROR] line + its block until next ------
+            awk '
+              /\[ERROR\]/ { print; inerror=1; next }
+              inerror {
+                print
+                if ($0 ~ /^------$/) inerror=0
+              }
+            ' super-linter.log > super-linter-errors.log
+
+            # If empty, note no errors
+            if [ ! -s super-linter-errors.log ]; then
+              echo "No errors found" > super-linter-errors.log
+            fi
           else
             echo "No super-linter.log found"
             touch super-linter-errors.log
@@ -54,28 +67,24 @@ jobs:
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python (Black, Pylint)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript (Standard)" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          echo "#### Preview of Linter Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Linter Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Preview of Extracted Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           if [ -s super-linter-errors.log ]; then
-            # Show only first 50 lines in UI summary for readability
-            head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
+            head -100 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "✅ No real linter errors found" >> "$GITHUB_STEP_SUMMARY"
+            echo "No errors found" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: 📊 Upload SARIF report to GitHub Code Scanning
-        if: always() && hashFiles('super-linter.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: super-linter.sarif
 
       - name: 📦 Upload Super-Linter Logs and Errors
         if: always()
@@ -83,7 +92,9 @@ jobs:
         with:
           name: super-linter-logs
           path: |
+            /tmp/lint/
             super-linter.log
             super-linter-errors.log
             super-linter.sarif
+            *.log
           if-no-files-found: ignore
