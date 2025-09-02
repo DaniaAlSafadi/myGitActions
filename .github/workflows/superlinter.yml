@@ -13,7 +13,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write  # Required for SARIF upload
+  security-events: write
 
 jobs:
   super-lint:
@@ -30,75 +30,56 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
 
-      - name: 🧹 Run Super-Linter (official action)
-        uses: super-linter/super-linter@v5.7.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_ALL_CODEBASE: true
-          VALIDATE_JSON: true
-          VALIDATE_PYTHON: true
-          VALIDATE_JAVASCRIPT_STANDARD: true
-          CREATE_LOG_FILE: true
-          LOG_LEVEL: VERBOSE
-          SARIF_REPORTER: true  # optional but recommended
+      - name: 🧹 Run Super-Linter (custom Docker)
+        run: |
+          echo "Running Super-Linter..."
+          docker run --rm \
+            -e VALIDATE_ALL_CODEBASE=true \
+            -e VALIDATE_JSON=true \
+            -e VALIDATE_PYTHON=true \
+            -e VALIDATE_JAVASCRIPT_STANDARD=true \
+            -e CREATE_LOG_FILE=true \
+            -e LOG_LEVEL=VERBOSE \
+            -v "$GITHUB_WORKSPACE":/github/workspace \
+            github/super-linter:v5.7.2 \
+            2>&1 | tee super-linter.log
 
-      # --- Option 1: Display only errors in UI ---
       - name: 📌 Display Linter Errors
         if: always()
         run: |
           echo "### Super-Linter Errors (if any)"
           echo ""
-          # Check /tmp/lint logs
-          if [ -d "/tmp/lint" ]; then
-            find /tmp/lint -name "*.log" -type f | while read -r logfile; do
-              echo "=== $(basename "$logfile") ==="
-              grep "\[ERROR\]" "$logfile" || echo "No errors found in $logfile"
-              echo ""
-            done
+          if [ -f super-linter.log ]; then
+            grep "\[ERROR\]" super-linter.log || echo "No errors found"
           else
-            echo "No linter logs found."
+            echo "No linter log found"
           fi
 
-      # --- Option 2: Generate Step Summary ---
       - name: 📝 Generate Step Summary
         if: always()
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python (Black, Pylint)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          # Show top logs from /tmp/lint
-          echo "#### Linter Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Top Linter Output" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          if [ -d "/tmp/lint" ]; then
-            find /tmp/lint -name "*.log" -type f | head -10 | while read -r logfile; do
-              echo "=== $(basename "$logfile") ===" >> "$GITHUB_STEP_SUMMARY"
-              # Show last 20 lines, including errors
-              tail -20 "$logfile" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Could not read $logfile" >> "$GITHUB_STEP_SUMMARY"
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-            done
+          if [ -f super-linter.log ]; then
+            tail -50 super-linter.log >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No linter log found" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📊 Upload SARIF report to GitHub Code Scanning
-        if: always() && hashFiles('super-linter.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: super-linter.sarif
-
-      - name: 📦 Upload Super-Linter Logs
+      - name: 📦 Upload Linter Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-logs
-          path: |
-            /tmp/lint/
-            super-linter.sarif
-            *.log
+          name: super-linter-log
+          path: super-linter.log
           if-no-files-found: ignore
