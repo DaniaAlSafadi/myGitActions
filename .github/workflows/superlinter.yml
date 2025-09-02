@@ -30,18 +30,13 @@ jobs:
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            # Extract blocks starting from [ERROR] until the ending ------
-            awk '
-              /\[ERROR\]/ { print; inerror=1; next }
-              inerror {
-                print
-                if ($0 ~ /^------$/) inerror=0
-              }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
+            # Extract only lines that look like actual lint errors (standard output + file paths)
+            grep -E "standard:|/github/workspace/" super-linter.log \
+              | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
 
             # If empty, mark no errors
             if [ ! -s super-linter-errors.log ]; then
-              echo "No errors found" > super-linter-errors.log
+              echo "No linting errors found 🎉" > super-linter-errors.log
             fi
           else
             echo "No super-linter.log found" > super-linter-errors.log
