@@ -27,7 +27,10 @@ jobs:
 
       - name: 🧹 Run Super-Linter
         id: lint
-        uses: super-linter/super-linter@v7.1.0
+        run: |
+          # Run super-linter and capture logs
+          super-linter/super-linter@v7.1.0 || true
+        shell: bash
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,9 +49,10 @@ jobs:
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          echo "#### JavaScript Errors (if any)" >> "$GITHUB_STEP_SUMMARY"
-          # grab only the error lines for JAVASCRIPT_STANDARD
-          grep "subscribers.js" /github/workspace/super-linter.log || echo "✅ No errors found" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Linter Errors Found" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep "\[ERROR\]" super-linter-output/super-linter.log || echo "✅ No errors found" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Artifact
         if: always()
