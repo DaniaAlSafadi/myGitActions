@@ -22,20 +22,21 @@ jobs:
       - name: 📄 List all checked out files
         run: find . -type f
         
-      - name: 🧹 Run Super-Linter and Capture Output
-        continue-on-error: true
-        run: |
-          # Run Super-Linter and capture all output
-          docker run \
-            -e DEFAULT_BRANCH=main \
-            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e VALIDATE_JSON=true \
-            -e VALIDATE_PYTHON=true \
-            -e VALIDATE_JAVASCRIPT_STANDARD=true \
-            -v "${{ github.workspace }}":/tmp/lint \
-            ghcr.io/super-linter/super-linter:v7.1.0 > linter_output.txt 2>&1 || true
+      - name: 🧹 Run Super-Linter
+        id: super-linter
+        continue-on-error: true  # Don't fail the workflow on linting errors
+        uses: super-linter/super-linter@v7.1.0
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_JSON: true
+          VALIDATE_PYTHON: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
+          CREATE_LOG_FILE: true
           
-          # Display the output in GitHub Step Summary
+      - name: 📝 Display Linting Results
+        if: always()
+        run: |
           echo "### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
@@ -43,18 +44,54 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Linter Results" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ "${{ steps.super-linter.outcome }}" = "failure" ]; then
+            echo "#### ❌ Linter Errors Found" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "#### ✅ No Linting Errors" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           
-          # Show errors and warnings from the output
-          grep -E "(\.js:|\.py:|\.json:|ERROR|WARN|FAIL)" linter_output.txt | head -100 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No linting issues found" >> "$GITHUB_STEP_SUMMARY"
+          # Look for actual linting errors (lines with file paths and error messages)
+          found_errors=false
+          
+          # Check common Super-Linter log locations
+          for log_location in "/tmp/lint" "/github/workspace" "/tmp"; do
+            if [ -d "$log_location" ]; then
+              find "$log_location" -name "*.log" -type f 2>/dev/null | while read logfile; do
+                if [ -s "$logfile" ]; then
+                  # Extract clean error lines that match the format: /path/file.ext:line:col: message (rule)
+                  grep -E "^\s*/.*\.(js|py|json):[0-9]+:[0-9]+:" "$logfile" 2>/dev/null | while read error_line; do
+                    echo "$error_line" >> "$GITHUB_STEP_SUMMARY"
+                    found_errors=true
+                  done
+                fi
+              done
+            fi
+          done
+          
+          # If no formatted errors found, look for any lines containing file paths with errors
+          if [ "$found_errors" = false ]; then
+            find /tmp /github/workspace -name "*.log" -type f 2>/dev/null | head -5 | while read logfile; do
+              if [ -s "$logfile" ]; then
+                # Look for lines that contain file paths and common error indicators
+                grep -E "/.*\.(js|py|json).*(\(|:).*(\)|$)" "$logfile" 2>/dev/null | \
+                grep -v "RUN_LOCAL\|Linting\|Found\|Processing" | \
+                head -20 >> "$GITHUB_STEP_SUMMARY" 2>/dev/null
+              fi
+            done
+          fi
           
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           
-      - name: 📦 Upload Linter Output
+      - name: 📦 Upload Super-Linter Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: linter-output
-          path: linter_output.txt
+          name: super-linter-logs
+          path: |
+            /tmp/lint/
+            /github/workspace/*.log
+            /tmp/*.log
           if-no-files-found: ignore
