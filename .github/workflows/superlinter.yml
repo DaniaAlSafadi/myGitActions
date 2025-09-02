@@ -2,10 +2,6 @@ name: Super-Linter
 
 on:
   push:
-    # paths:
-    #   - '.github/workflows/superlinter.yml'
-    #   - 'library/books.json'
-    #   - 'API-Build/routes/subscribers.js'
   pull_request:
   workflow_dispatch:
 
@@ -41,12 +37,12 @@ jobs:
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
 
-      - name: 📌 Save Linter Errors to File
+      - name: 📌 Save Real Linter Errors to File
         if: always()
         run: |
-          # Filter [ERROR] lines from super-linter.log
           if [ -f super-linter.log ]; then
-            grep "\[ERROR\]" super-linter.log > super-linter-errors.log || echo "No errors found"
+            # Extract only file:line style error messages (ignoring INFO/DEBUG)
+            grep -E "^[^ ]+:[0-9]+:[0-9]+:" super-linter.log > super-linter-errors.log || echo "No errors found"
           else
             echo "No super-linter.log found"
             touch super-linter-errors.log
@@ -66,10 +62,10 @@ jobs:
           echo "#### Preview of Linter Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           if [ -s super-linter-errors.log ]; then
-            # Show only first 50 lines in UI summary
+            # Show only first 50 lines in UI summary for readability
             head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "No errors found" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ No real linter errors found" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
