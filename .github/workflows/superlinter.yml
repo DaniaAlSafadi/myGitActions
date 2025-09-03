@@ -30,25 +30,23 @@ jobs:
         uses: github/super-linter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JSON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
+          VALIDATE_JSON: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
-          NO_COLOR: true
 
       - name: 📌 Extract only real lint errors
         if: always()
         run: |
           if [ -f super-linter.log ]; then
             awk '
-              /\[ERROR\] +Found errors in/ { capture=1; print; next }
-              capture {
-                print
-                if ($0 ~ /^------$/) { capture=0; print "" }
-              }
+              # Start capture when [ERROR] ... Command output: appears
+              /\[ERROR\].*Command output:/ { capture=1; print; next }
+              # Capture everything until the closing -----
+              capture && /^------$/ { print; capture=0; next }
+              capture { print }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
 
-            # If no lint errors found, add a message
             if ! grep -q "------" super-linter-errors.log; then
               echo "✅ No lint errors found" > super-linter-errors.log
             fi
@@ -61,14 +59,20 @@ jobs:
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Preview of Linter Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript (Standard)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if [ -s super-linter-errors.log ]; then
+            cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✅ No lint errors found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📦 Upload Super-Linter Logs and Errors
+      - name: 📦 Upload Super-Linter Logs and Extracted Errors
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -76,5 +80,4 @@ jobs:
           path: |
             super-linter.log
             super-linter-errors.log
-            super-linter.sarif
           if-no-files-found: ignore
