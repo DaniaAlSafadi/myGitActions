@@ -1,16 +1,13 @@
 name: Super-Linter
-
 on:
   push:
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
   checks: write
   pull-requests: write
   security-events: write  # Required for SARIF upload
-
 jobs:
   super-lint:
     runs-on: ubuntu-latest
@@ -19,13 +16,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: 📁 Print repo structure
         run: tree -L 3 || echo "tree not installed"
-
       - name: 📄 List all checked out files
         run: find . -type f
-
       - name: 🧹 Run Super-Linter
         uses: github/super-linter@v5
         env:
@@ -34,20 +28,27 @@ jobs:
           VALIDATE_JSON: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
-
       - name: 📌 Save Linter Errors to File
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            # Extract [ERROR] blocks along with the description between dashes
+            # Extract [ERROR] blocks with "Command output:" and the content between dashes
             awk '
-              /\[ERROR\]/ { print; inerror=1; next }
+              /\[ERROR\].*Command output:/ { 
+                print; 
+                inerror=1; 
+                dash_count=0; 
+                next 
+              }
               inerror {
                 print
-                if ($0 ~ /^------$/) inerror=0
+                if ($0 ~ /^------$/) {
+                  dash_count++
+                  if (dash_count == 2) inerror=0
+                }
               }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
-
+            
             # If no errors found, mark as "No lint errors"
             if [ ! -s super-linter-errors.log ]; then
               echo "✅ No lint errors found" > super-linter-errors.log
@@ -55,7 +56,6 @@ jobs:
           else
             echo "⚠️ super-linter.log not found" > super-linter-errors.log
           fi
-
       - name: 📝 Generate Step Summary
         if: always()
         run: |
@@ -69,7 +69,6 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-
       - name: 📦 Upload Super-Linter Logs and Errors
         if: always()
         uses: actions/upload-artifact@v4
