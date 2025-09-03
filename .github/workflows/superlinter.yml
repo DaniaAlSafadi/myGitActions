@@ -40,13 +40,16 @@ jobs:
         run: |
           if [ -f super-linter.log ]; then
             awk '
-              # Start capture when [ERROR] ... Command output: appears
+              # Start capturing after [ERROR] ... Command output:
               /\[ERROR\].*Command output:/ { capture=1; print; next }
-              # Capture everything until the closing -----
-              capture && /^------$/ { print; capture=0; next }
-              capture { print }
+              # Capture all lines until the closing -----
+              capture {
+                print
+                if ($0 ~ /^------$/) capture=0
+              }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
 
+            # If no actual error blocks were captured
             if ! grep -q "------" super-linter-errors.log; then
               echo "✅ No lint errors found" > super-linter-errors.log
             fi
