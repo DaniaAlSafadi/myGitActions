@@ -36,6 +36,7 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
+          NO_COLOR: true 
 
       - name: 📌 Save Linter Errors to File
         if: always()
