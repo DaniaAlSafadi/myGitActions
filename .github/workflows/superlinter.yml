@@ -1,40 +1,4 @@
-# Extract only [ERROR] lines and capture complete "Command output:" blocks for [ERROR] only
-            awk '
-              /\[ERROR\].*Command output:/ {
-                print; 
-                inerror=1; 
-                dash_count=0; 
-                next
-              }
-              /\[ERROR\]/ && !inerror {
-                print;
-                next
-              }
-              inerror {
-                # Skip any [DEBUG] lines completely
-                if ($0 ~ /\[DEBUG\]/) {
-                  next
-                }
-                # If we hit another [ERROR] line while in error block, handle it
-                if ($0 ~ /\[ERROR\]/) {
-                  if ($0 ~ /Command output:/) {
-                    print;
-                    dash_count=0;
-                    next
-                  } else {
-                    print;
-                    inerror=0;
-                    next
-                  }
-                }
-                print
-                if ($0 ~ /^------$/) {
-                  dash_count++
-                  if (dash_count == 2) inerror=0
-                }
-              }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
-                  name: Super-Linter
+name: Super-Linter
 on:
   push:
   pull_request:
