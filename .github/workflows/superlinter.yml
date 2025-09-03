@@ -1,15 +1,15 @@
 name: Super-Linter
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
+  pull_request:
+  push:
 
 permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write  # Required for SARIF upload
+  security-events: write # Required for SARIF upload
 
 jobs:
   super-lint:
@@ -20,80 +20,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📁 Print repo structure
-        run: tree -L 3 || echo "tree not installed"
-
-      - name: 📄 List all checked out files
-        run: find . -type f
-
-      - name: 🧹 Run Super-Linter (official action)
+      - name: 🧹 Run Super-Linter
         uses: github/super-linter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true
           VALIDATE_JSON: true
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
-          NO_COLOR: true   # 👈 strip ANSI colors at source
 
-      - name: 📌 Save Linter Errors to File
+      - name: 📌 Extract only linting errors
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            # Extract only error blocks between ------
             awk '
-              /\[ERROR\]/ { inblock=1; next }   # enter block after [ERROR], skip the line
-              inblock {
+              /^\[ERROR\].*Found errors in/ {print; inerr=1; next}
+              inerr {
                 print
-                if ($0 ~ /^------$/) inblock=0
+                if ($0 ~ /^------$/) {inerr=0; print ""}
               }
-            ' super-linter.log | sed -E "s/\x1B\[[0-9;]*[A-Za-z]//g" > super-linter-errors.log
+            ' super-linter.log \
+            | sed -r "s/\x1B\[[0-9;]*[mK]//g" \
+            > super-linter-errors.log
 
-            # If empty, mark no errors
             if [ ! -s super-linter-errors.log ]; then
-              echo "No linting errors found 🎉" > super-linter-errors.log
+              echo "✅ No lint errors" > super-linter-errors.log
             fi
           else
-            echo "No super-linter.log found" > super-linter-errors.log
+            echo "⚠️ super-linter.log not found" > super-linter-errors.log
           fi
 
-      - name: 📝 Generate Step Summary
-        if: always()
-        run: |
-          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checks run for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python (Black, Pylint)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript (Standard)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          echo "#### Extracted Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          if [ -s super-linter-errors.log ]; then
-            head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
-            if [ $(wc -l < super-linter-errors.log) -gt 50 ]; then
-              echo "... (truncated, see full log artifact)" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          else
-            echo "No errors found 🎉" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-      - name: 📊 Upload SARIF report to GitHub Code Scanning
-        if: always() && hashFiles('super-linter.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: super-linter.sarif
-
-      - name: 📦 Upload Super-Linter Logs and Errors
+      - name: 📦 Upload Extracted Errors (artifact)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-logs
-          path: |
-            super-linter.log
-            super-linter-errors.log
-            super-linter.sarif
-          if-no-files-found: ignore
+          name: super-linter-errors
+          path: super-linter-errors.log
+
+      - name: 📝 Add Extracted Errors to Summary
+        if: always()
+        run: |
+          echo "## Super-Linter Extracted Errors" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          head -50 super-linter-errors.log >> $GITHUB_STEP_SUMMARY
+          if [ $(wc -l < super-linter-errors.log) -gt 50 ]; then
+            echo "... (truncated, see artifact for full log)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
