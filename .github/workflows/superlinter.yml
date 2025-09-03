@@ -35,22 +35,21 @@ jobs:
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
 
-      - name: 📌 Extract only real lint errors
+      - name: 📌 Save Linter Errors to File
         if: always()
         run: |
           if [ -f super-linter.log ]; then
+            # Extract [ERROR] blocks along with the description between dashes
             awk '
-              # Start capturing after [ERROR] ... Command output:
-              /\[ERROR\].*Command output:/ { capture=1; print; next }
-              # Capture all lines until the closing -----
-              capture {
+              /\[ERROR\]/ { print; inerror=1; next }
+              inerror {
                 print
-                if ($0 ~ /^------$/) capture=0
+                if ($0 ~ /^------$/) inerror=0
               }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
 
-            # If no actual error blocks were captured
-            if ! grep -q "------" super-linter-errors.log; then
+            # If no errors found, mark as "No lint errors"
+            if [ ! -s super-linter-errors.log ]; then
               echo "✅ No lint errors found" > super-linter-errors.log
             fi
           else
@@ -68,14 +67,10 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          if [ -s super-linter-errors.log ]; then
-            cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "✅ No lint errors found" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: 📦 Upload Super-Linter Logs and Extracted Errors
+      - name: 📦 Upload Super-Linter Logs and Errors
         if: always()
         uses: actions/upload-artifact@v4
         with:
