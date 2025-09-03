@@ -37,22 +37,31 @@ jobs:
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
 
-      - name: 📌 Extract only linting errors
+      - name: 📌 Extract only real lint errors
         if: always()
         run: |
           if [ -f super-linter.log ]; then
             awk '
-              /\[ERROR\]/ {print; inerr=1; next}
-              inerr {
-                print
-                if ($0 ~ /^------$/) {inerr=0; print ""}
+              # Capture only [ERROR] blocks that are real lint errors
+              /\[ERROR\].*Found errors in/ {
+                block=$0
+                capture=1
+                next
+              }
+              capture {
+                block = block "\n" $0
+                if ($0 ~ /^------$/) {
+                  print block "\n"
+                  capture=0
+                  block=""
+                }
               }
             ' super-linter.log \
             | sed -r "s/\x1B\[[0-9;]*[mK]//g" \
             > super-linter-errors.log
 
-            if [ ! -s super-linter-errors.log ]; then
-              echo "✅ No lint errors" > super-linter-errors.log
+            if ! grep -q "------" super-linter-errors.log; then
+              echo "✅ No lint errors found" > super-linter-errors.log
             fi
           else
             echo "⚠️ super-linter.log not found" > super-linter-errors.log
@@ -63,8 +72,8 @@ jobs:
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Extracted Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
