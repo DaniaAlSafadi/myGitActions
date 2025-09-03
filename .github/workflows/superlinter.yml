@@ -1,16 +1,13 @@
 name: Super-Linter
-
 on:
   push:
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write
-
+  security-events: write  # Required for SARIF upload
 jobs:
   super-lint:
     runs-on: ubuntu-latest
@@ -19,49 +16,84 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+      - name: 📁 Print repo structure
+        run: tree -L 3 || echo "tree not installed"
+      - name: 📄 List all checked out files
+        run: find . -type f
       - name: 🧹 Run Super-Linter
         uses: github/super-linter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JAVASCRIPT_STANDARD: true
-          VALIDATE_JSON: true
           VALIDATE_PYTHON: true
+          VALIDATE_JSON: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
-
-      - name: 📌 Save Linter Summary and Errors in Markdown
+      - name: 📌 Save Linter Errors to File
         if: always()
         run: |
-          MD_FILE="super-linter-errors.log"
-          echo "## Super-Linter Checks" > $MD_FILE
-          echo "" >> $MD_FILE
-          
-          # Default check table
-          echo "| Linter | Status |" >> $MD_FILE
-          echo "| ------ | ------ |" >> $MD_FILE
-          echo "| JavaScript Standard | $(grep -q 'Found errors in \[standard\] linter' super-linter.log && echo '❌ Errors' || echo '✅ Passed') |" >> $MD_FILE
-          echo "| JSON | $(grep -q 'ERRORS FOUND in JSON' super-linter.log && echo '❌ Errors' || echo '✅ Passed') |" >> $MD_FILE
-          echo "| Python | $(grep -q 'ERRORS FOUND in PYTHON' super-linter.log && echo '❌ Errors' || echo '✅ Passed') |" >> $MD_FILE
-          echo "" >> $MD_FILE
-          
-          # Extract [ERROR] blocks with Command output and text between ------
           if [ -f super-linter.log ]; then
+            # Extract all [ERROR] lines and capture complete "Command output:" blocks
             awk '
-              /\[ERROR\]/ { print; inerror=1; next }
-              inerror {
-                print
-                if ($0 ~ /^------$/) inerror=0
+              /\[ERROR\]/ {
+                if ($0 ~ /Command output:/) {
+                  print; 
+                  inerror=1; 
+                  dash_count=0; 
+                  next
+                } else {
+                  print;
+                  next
+                }
               }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" >> $MD_FILE
+              inerror {
+                # If we hit another [ERROR] line while in error block, handle it
+                if ($0 ~ /\[ERROR\]/) {
+                  if ($0 ~ /Command output:/) {
+                    print;
+                    dash_count=0;
+                    next
+                  } else {
+                    print;
+                    inerror=0;
+                    next
+                  }
+                }
+                print
+                if ($0 ~ /^------$/) {
+                  dash_count++
+                  if (dash_count == 2) inerror=0
+                }
+              }
+            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
+            
+            # If no errors found, mark as "No lint errors"
+            if [ ! -s super-linter-errors.log ]; then
+              echo "✅ No lint errors found" > super-linter-errors.log
+            fi
           else
-            echo "⚠️ super-linter.log not found" >> $MD_FILE
+            echo "⚠️ super-linter.log not found" > super-linter-errors.log
           fi
-
-      - name: 📝 Upload Markdown Log
+      - name: 📝 Generate Step Summary
+        if: always()
+        run: |
+          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript (Standard)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: 📦 Upload Super-Linter Logs and Errors
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-errors
-          path: super-linter-errors.log
+          name: super-linter-logs
+          path: |
+            super-linter.log
+            super-linter-errors.log
           if-no-files-found: ignore
