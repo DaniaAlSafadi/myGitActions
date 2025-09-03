@@ -24,7 +24,9 @@ jobs:
         uses: github/super-linter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true 
           VALIDATE_JAVASCRIPT_STANDARD: true
+          VALIDATE_PYTHON: true
           VALIDATE_JSON: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
