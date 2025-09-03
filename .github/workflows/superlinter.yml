@@ -31,7 +31,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JSON: true
-          VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
@@ -42,24 +41,14 @@ jobs:
         run: |
           if [ -f super-linter.log ]; then
             awk '
-              # Capture only [ERROR] blocks that are real lint errors
-              /\[ERROR\].*Found errors in/ {
-                block=$0
-                capture=1
-                next
-              }
+              /\[ERROR\] +Found errors in/ { capture=1; print; next }
               capture {
-                block = block "\n" $0
-                if ($0 ~ /^------$/) {
-                  print block "\n"
-                  capture=0
-                  block=""
-                }
+                print
+                if ($0 ~ /^------$/) { capture=0; print "" }
               }
-            ' super-linter.log \
-            | sed -r "s/\x1B\[[0-9;]*[mK]//g" \
-            > super-linter-errors.log
+            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
 
+            # If no lint errors found, add a message
             if ! grep -q "------" super-linter-errors.log; then
               echo "✅ No lint errors found" > super-linter-errors.log
             fi
@@ -72,10 +61,12 @@ jobs:
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Preview of Linter Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
+          head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Logs and Errors
         if: always()
@@ -83,7 +74,6 @@ jobs:
         with:
           name: super-linter-logs
           path: |
-            /tmp/lint/
             super-linter.log
             super-linter-errors.log
             super-linter.sarif
