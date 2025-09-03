@@ -1,22 +1,33 @@
-name: Super-Linter with Error Extraction
+name: Super-Linter
 
 on:
-  workflow_dispatch:
-  pull_request:
   push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  security-events: write  # Required for SARIF upload
 
 jobs:
   super-lint:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🧹 Run Super-Linter
-        id: lint
-        uses: super-linter/super-linter@v5.7.2
+      - name: 📁 Print repo structure
+        run: tree -L 3 || echo "tree not installed"
+
+      - name: 📄 List all checked out files
+        run: find . -type f
+
+      - name: 🧹 Run Super-Linter (official action)
+        uses: github/super-linter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: true
@@ -30,34 +41,49 @@ jobs:
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            # Extract only lines that look like actual lint errors (standard output + file paths)
-            grep -E "standard:|/github/workspace/" super-linter.log \
-              | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
-
-            # If empty, mark no errors
-            if [ ! -s super-linter-errors.log ]; then
-              echo "No linting errors found 🎉" > super-linter-errors.log
-            fi
+            grep "\[ERROR\]" super-linter.log > super-linter-errors.log || echo "No errors found" > super-linter-errors.log
           else
             echo "No super-linter.log found" > super-linter-errors.log
           fi
 
-      - name: 📤 Upload Full Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: super-linter-log
-          path: super-linter.log
-
-      - name: 📤 Upload Extracted Errors
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: super-linter-errors
-          path: super-linter-errors.log
-
-      - name: 📝 Add Extracted Errors to Summary
+      - name: 📝 Generate Step Summary
         if: always()
         run: |
-          echo "## Super-Linter Extracted Errors" >> $GITHUB_STEP_SUMMARY
-          cat super-linter-errors.log >> $GITHUB_STEP_SUMMARY
+          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Preview of Linter Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          if [ -s super-linter-errors.log ]; then
+            # Show only first 50 lines to keep UI readable
+            head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
+            if [ $(wc -l < super-linter-errors.log) -gt 50 ]; then
+              echo "... (truncated, see full log artifact)" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "No errors found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📊 Upload SARIF report to GitHub Code Scanning
+        if: always() && hashFiles('super-linter.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: super-linter.sarif
+
+      - name: 📦 Upload Super-Linter Logs and Errors
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-linter-logs
+          path: |
+            super-linter.log
+            super-linter-errors.log
+            super-linter.sarif
+          if-no-files-found: ignore
