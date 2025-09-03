@@ -26,6 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JAVASCRIPT_STANDARD: true
           VALIDATE_JSON: true
+          VALIDATE_PYTHON: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
       - name: 📌 Save Linter Errors to File
@@ -76,16 +77,16 @@ jobs:
       - name: 📝 Generate Step Summary
         if: always()
         run: |
-          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🔍 Super-Linter Analysis Report" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript (Standard)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Validation Scope:**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 🟨 JavaScript" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 🟦 JSON" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 🐍 Python" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
       - name: 📦 Upload Super-Linter Logs and Errors
         if: always()
         uses: actions/upload-artifact@v4
