@@ -32,15 +32,32 @@ jobs:
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            # Extract [ERROR] blocks with "Command output:" and the content between dashes
+            # Extract all [ERROR] lines and capture complete "Command output:" blocks
             awk '
-              /\[ERROR\].*Command output:/ { 
-                print; 
-                inerror=1; 
-                dash_count=0; 
-                next 
+              /\[ERROR\]/ {
+                if ($0 ~ /Command output:/) {
+                  print; 
+                  inerror=1; 
+                  dash_count=0; 
+                  next
+                } else {
+                  print;
+                  next
+                }
               }
               inerror {
+                # If we hit another [ERROR] line while in error block, handle it
+                if ($0 ~ /\[ERROR\]/) {
+                  if ($0 ~ /Command output:/) {
+                    print;
+                    dash_count=0;
+                    next
+                  } else {
+                    print;
+                    inerror=0;
+                    next
+                  }
+                }
                 print
                 if ($0 ~ /^------$/) {
                   dash_count++
