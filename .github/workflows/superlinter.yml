@@ -41,49 +41,13 @@ jobs:
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            grep "\[ERROR\]" super-linter.log > super-linter-errors.log || echo "No errors found" > super-linter-errors.log
-          else
-            echo "No super-linter.log found" > super-linter-errors.log
-          fi
-
-      - name: 📝 Generate Step Summary
-        if: always()
-        run: |
-          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Preview of Linter Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          if [ -s super-linter-errors.log ]; then
-            # Show only first 50 lines to keep UI readable
-            head -50 super-linter-errors.log >> "$GITHUB_STEP_SUMMARY"
-            if [ $(wc -l < super-linter-errors.log) -gt 50 ]; then
-              echo "... (truncated, see full log artifact)" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          else
-            echo "No errors found" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Job summary generated at run-time" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: 📊 Upload SARIF report to GitHub Code Scanning
-        if: always() && hashFiles('super-linter.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: super-linter.sarif
-
-      - name: 📦 Upload Super-Linter Logs and Errors
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: super-linter-logs
-          path: |
-            super-linter.log
-            super-linter-errors.log
-            super-linter.sarif
-          if-no-files-found: ignore
+            # Extract [ERROR] blocks along with the description between dashes
+            awk '
+              /\[ERROR\]/ { print; inerror=1; next }
+              inerror {
+                print
+                if ($0 ~ /^------$/) inerror=0
+              }
+            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.log
+            # If empty, mark no errors
+            if [ ! -s super-linter-errors.log ]; then
