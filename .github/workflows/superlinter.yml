@@ -40,21 +40,54 @@ jobs:
       - name: 📌 Save Linter Errors to Markdown file
         if: always()
         run: |
+          # Create summary table first
+          echo "### Super-Linter Summary" > super-linter-errors.md
+          echo "" >> super-linter-errors.md
+          echo "| Language | Validation result |" >> super-linter-errors.md
+          echo "|----------|-----------------| " >> super-linter-errors.md
+
+          check_lang_md() {
+            local lang="$1"
+            local pattern=""
+            case "$lang" in
+              JAVASCRIPT_STANDARD) pattern="\[ERROR\].*Found errors in \[standard\]";;
+              JSON) pattern="\[ERROR\].*Found errors in \[json\]";;
+              PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
+            esac
+            if grep -qE "$pattern" super-linter.log 2>/dev/null; then
+              echo "| ${lang} | Fail ❌ |" >> super-linter-errors.md
+            else
+              echo "| ${lang} | Pass ✅ |" >> super-linter-errors.md
+            fi
+          }
+
+          # Check each language and build table
+          check_lang_md "JAVASCRIPT_STANDARD"
+          check_lang_md "JSON"
+          check_lang_md "PYTHON"
+
+          echo "" >> super-linter-errors.md
+          echo "#### Extracted Lint Errors" >> super-linter-errors.md
+          echo '```' >> super-linter-errors.md
+
+          # Extract actual error lines
           if [ -f super-linter.log ]; then
-            # Extract only [ERROR] lines and remove color codes
-            grep "\[ERROR\]" super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
-            if [ ! -s super-linter-errors.md ]; then
-              echo "✅ No lint errors found" > super-linter-errors.md
+            grep "\[ERROR\]" super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" >> super-linter-errors.md
+            if ! grep -q "\[ERROR\]" super-linter.log; then
+              echo "✅ No lint errors found" >> super-linter-errors.md
             fi
           else
-            echo "⚠️ super-linter.log not found" > super-linter-errors.md
+            echo "⚠️ super-linter.log not found" >> super-linter-errors.md
           fi
+
+          echo '```' >> super-linter-errors.md
 
       - name: 📝 Generate Step Summary
         if: always()
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          # Add the summary table header
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|-----------------| " >> "$GITHUB_STEP_SUMMARY"
 
@@ -66,23 +99,20 @@ jobs:
               JSON) pattern="\[ERROR\].*Found errors in \[json\]";;
               PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
             esac
-
-            if grep -qE "$pattern" super-linter-errors.md; then
+            if grep -qE "$pattern" super-linter.log; then
               echo "| ${lang} | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
             else
               echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
             fi
           }
 
-          # Check each language
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # Add detection message if errors found
-          if ! grep -q "No lint errors found" super-linter-errors.md; then
+          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
