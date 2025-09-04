@@ -21,11 +21,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📄 List all checked out files
-        run: find . -type f
-
       - name: 🧹 Run Super-Linter
-        uses: super-linter/super-linter@v7.1.0
+        uses: github/super-linter@v5
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,7 +73,6 @@ jobs:
       - name: 📝 Generate Step Summary
         if: always()
         run: |
-          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "#### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -85,27 +81,6 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
-          check_lang() {
-            local lang="$1"
-            local pattern=""
-            case "$lang" in
-              JAVASCRIPT_STANDARD) pattern="\[ERROR\].*Found errors in \[standard\]";;
-              JSON) pattern="\[ERROR\].*Found errors in \[json\]";;
-              PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
-            esac
-            if grep -qE "$pattern" super-linter.log; then
-              echo "| ${lang} | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          }
-          check_lang "JAVASCRIPT_STANDARD"
-          check_lang "JSON"
-          check_lang "PYTHON"
-
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
