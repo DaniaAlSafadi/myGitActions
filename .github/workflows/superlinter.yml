@@ -75,13 +75,11 @@ jobs:
           
           # Then add the detailed errors
           if [ -f super-linter.log ]; then
-            # Check if there are any errors
             if grep -q "\[ERROR\]" super-linter.log; then
-              echo "## Detailed Lint Errors" >> super-linter-errors.md
+              echo "## Extracted Lint Errors" >> super-linter-errors.md
               echo "" >> super-linter-errors.md
               echo "\`\`\`" >> super-linter-errors.md
               
-              # Extract and clean up error messages
               awk '
                 /\[ERROR\]/ {
                   if ($0 ~ /Command output:/) {
@@ -148,25 +146,22 @@ jobs:
               echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
             fi
           }
-          # Check each language
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Add detection message if errors found
-          if [ -s super-linter-errors.md ] && grep -q "## Detailed Lint Errors" super-linter-errors.md; then
-            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Add extracted lint errors directly in UI instead of artifact message
+          if [ -f super-linter-errors.md ]; then
+            if grep -q "## Extracted Lint Errors" super-linter-errors.md; then
+              echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              awk '/## Extracted Lint Errors/{flag=1; next} /^```/{flag=0} flag || /^## Result/{flag=1; next} flag' super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "✅ No lint errors found! All code formatting checks passed." >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi
-          echo "#### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Full Report Available in Artifacts" >> "$GITHUB_STEP_SUMMARY"
-          echo "Download the 'super-linter-errors' artifact for the complete summary table and detailed error log." >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Errors
         if: always()
