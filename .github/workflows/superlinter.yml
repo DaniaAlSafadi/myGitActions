@@ -44,11 +44,11 @@ jobs:
 
           if [ -f super-linter.log ]; then
             awk '
-              # Only lines with [ERROR]
               /\[ERROR\]/ {
                 if ($0 ~ /Command output:/) {
                   inerror=1
                   dash_count=0
+                  print
                   next
                 } else {
                   print
@@ -115,15 +115,28 @@ jobs:
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # 3️⃣ Extracted lint errors
+          # 3️⃣ Extracted lint errors (red [ERROR], bold messages)
           if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
+          echo '```ansi' >> "$GITHUB_STEP_SUMMARY"
+
+          awk '
+            # Red [ERROR] lines
+            /\[ERROR\]/ {
+              gsub(/\[ERROR\]/, "\033[31m[ERROR]\033[0m") # red
+              print
+              next
+            }
+
+            # Bold the content between ------
+            /^------$/ { print "\033[1m" $0 "\033[0m"; next }
+            { print }
+          ' super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
+
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Errors
