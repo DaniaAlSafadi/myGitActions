@@ -81,12 +81,30 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
-            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          fi
 
+          # Print results table
+          echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
+          check_lang() {
+            local lang="$1"
+            local pattern=""
+            case "$lang" in
+              JAVASCRIPT_STANDARD) pattern="\[ERROR\].*Found errors in \[standard\]";;
+              JSON) pattern="\[ERROR\].*Found errors in \[json\]";;
+              PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
+            esac
+            if grep -qE "$pattern" super-linter.log; then
+              echo "| ${lang} | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+          check_lang "JAVASCRIPT_STANDARD"
+          check_lang "JSON"
+          check_lang "PYTHON"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # Extracted lint errors
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
