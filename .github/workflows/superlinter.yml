@@ -83,21 +83,21 @@ jobs:
           echo "|----------|-------------------|" >> "$GITHUB_STEP_SUMMARY"
           
           # Check JavaScript Standard
-          if grep -q "ERRORS FOUND in JAVASCRIPT_STANDARD" super-linter.log 2>/dev/null; then
+          if grep -q "ERRORS FOUND in JAVASCRIPT_STANDARD:" super-linter.log 2>/dev/null; then
             echo "| JAVASCRIPT_STANDARD | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "| JAVASCRIPT_STANDARD | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
           fi
           
           # Check JSON
-          if grep -q "ERRORS FOUND in JSON" super-linter.log 2>/dev/null; then
+          if grep -q "ERRORS FOUND in JSON:" super-linter.log 2>/dev/null; then
             echo "| JSON | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "| JSON | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
           fi
           
           # Check Python
-          if grep -q "ERRORS FOUND in PYTHON" super-linter.log 2>/dev/null; then
+          if grep -q "ERRORS FOUND in PYTHON:" super-linter.log 2>/dev/null; then
             echo "| PYTHON | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "| PYTHON | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
