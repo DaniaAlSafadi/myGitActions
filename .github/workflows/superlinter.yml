@@ -41,38 +41,8 @@ jobs:
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            awk '
-              /\[ERROR\]/ {
-                if ($0 ~ /Command output:/) {
-                  print;
-                  inerror=1;
-                  dash_count=0;
-                  next
-                } else {
-                  print;
-                  next
-                }
-              }
-              inerror {
-                if ($0 ~ /\[ERROR\]/) {
-                  if ($0 ~ /Command output:/) {
-                    print;
-                    dash_count=0;
-                    next
-                  } else {
-                    print;
-                    inerror=0;
-                    next
-                  }
-                }
-                print
-                if ($0 ~ /^------$/) {
-                  dash_count++
-                  if (dash_count == 2) inerror=0
-                }
-              }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
-            
+            # Extract only [ERROR] lines and remove color codes
+            grep "\[ERROR\]" super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
             if [ ! -s super-linter-errors.md ]; then
               echo "✅ No lint errors found" > super-linter-errors.md
             fi
@@ -85,7 +55,6 @@ jobs:
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Add the summary table header
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|-----------------| " >> "$GITHUB_STEP_SUMMARY"
 
@@ -98,7 +67,7 @@ jobs:
               PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
             esac
 
-            if grep -qE "$pattern" super-linter.log; then
+            if grep -qE "$pattern" super-linter-errors.md; then
               echo "| ${lang} | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
             else
               echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
@@ -113,7 +82,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           # Add detection message if errors found
-          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
+          if ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
