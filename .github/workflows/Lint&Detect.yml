@@ -68,7 +68,7 @@ jobs:
             fi
           else
             echo "⚠️ super-linter.log not found" > $MD_FILE
-
+          fi
       - name: 📝 Generate Step Summary
         if: always()
         run: |
@@ -80,14 +80,7 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          # ✅ Print message about lint errors if any exist
-          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
-            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          # 2️⃣ Summary table
+          # Print results table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
           check_lang() {
@@ -108,13 +101,11 @@ jobs:
           check_lang "JSON"
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          # 3️⃣ Extracted lint errors
+          # Extracted lint errors
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-
       - name: 📦 Upload Super-Linter Errors
         if: always()
         uses: actions/upload-artifact@v4
@@ -133,16 +124,13 @@ jobs:
       - name: 🕵️‍♀️ Scan for Debug Keywords
         run: |
           echo "🔍 Scanning repo for console.log and print statements..."
-
           FILE_PATHS=$(find . -type f \( -name "*.js" -o -name "*.py" \))
           hit_flag=0
           js_flag=0
           py_flag=0
-
           mkdir -p keyword-scan-output
           REPORT_FILE=keyword-scan-output/keyword-scan-report.md
           echo "## 🔎 Keyword Scan Report" > "$REPORT_FILE"
-
           format_path() {
             clean_path="${1#./}"
             if [[ "$clean_path" == */* ]]; then
@@ -151,7 +139,6 @@ jobs:
               echo "📄 _${clean_path}_"
             fi
           }
-
           while IFS= read -r path; do
             if [[ -f "$path" ]]; then
               if [[ "$path" == *.js ]]; then
@@ -183,7 +170,6 @@ jobs:
               fi
             fi
           done <<< "$FILE_PATHS"
-
           if [[ "$hit_flag" -eq 1 ]]; then
             echo "❌ Detected disallowed keywords."
             cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
@@ -192,7 +178,6 @@ jobs:
             echo "✅ No disallowed keywords found."
             echo -e "\n✅ No disallowed keywords found." | tee -a "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           fi
-
       - name: 📦 Upload keyword scan report
         if: always()
         uses: actions/upload-artifact@v4
