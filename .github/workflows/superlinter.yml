@@ -37,38 +37,39 @@ jobs:
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
 
-      - name: 📌 Save Linter Errors to Markdown file (clean)
+      - name: 📌 Save Linter Errors to Markdown file ([ERROR] only)
         if: always()
         run: |
           MD_FILE="super-linter-errors.md"
-
           if [ -f super-linter.log ]; then
             awk '
+              # Only process lines with [ERROR]
               /\[ERROR\]/ {
                 if ($0 ~ /Command output:/) {
+                  print
                   inerror=1
                   dash_count=0
-                  print
                   next
                 } else {
                   print
                   next
                 }
               }
-
+              # Capture lines after Command output until double dashed lines
               inerror {
-                # Stop after two dashed lines
+                if ($0 ~ /\[ERROR\]/ && $0 !~ /Command output:/) {
+                  print
+                  inerror=0
+                  next
+                }
+                # Only print lines that do not contain [DEBUG] or [INFO]
+                if ($0 !~ /\[DEBUG\]|\[INFO\]/) print
                 if ($0 ~ /^------$/) {
                   dash_count++
                   if (dash_count == 2) inerror=0
-                  next
                 }
-
-                # Only print lines that are not [DEBUG] or [INFO]
-                if ($0 !~ /\[DEBUG\]|\[INFO\]/) print
               }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > $MD_FILE
-
             if [ ! -s $MD_FILE ]; then
               echo "✅ No lint errors found" > $MD_FILE
             fi
@@ -82,7 +83,7 @@ jobs:
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # 1️⃣ Code Style Check Summary first
+          # 1️⃣ Code Style Check Summary
           echo "#### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
@@ -91,10 +92,9 @@ jobs:
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # 2️⃣ Then the summary table
+          # 2️⃣ Summary table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|-----------------| " >> "$GITHUB_STEP_SUMMARY"
-
           check_lang() {
             local lang="$1"
             local pattern=""
@@ -109,13 +109,12 @@ jobs:
               echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
             fi
           }
-
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # 3️⃣ Extracted lint errors (red [ERROR], bold messages)
+          # 3️⃣ Extracted lint errors with red [ERROR]
           if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -123,20 +122,8 @@ jobs:
 
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```ansi' >> "$GITHUB_STEP_SUMMARY"
-
-          awk '
-            # Red [ERROR] lines
-            /\[ERROR\]/ {
-              gsub(/\[ERROR\]/, "\033[31m[ERROR]\033[0m") # red
-              print
-              next
-            }
-
-            # Bold the content between ------
-            /^------$/ { print "\033[1m" $0 "\033[0m"; next }
-            { print }
-          ' super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
-
+          # Replace [ERROR] with red [ERROR]
+          sed 's/\[ERROR\]/\x1B[31m[ERROR]\x1B[0m/g' super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Errors
