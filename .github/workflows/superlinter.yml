@@ -27,7 +27,7 @@ jobs:
         run: find . -type f
 
       - name: 🧹 Run Super-Linter
-        uses: super-linter/super-linter@v7.1.0
+        uses: github/super-linter@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JAVASCRIPT_STANDARD: true
@@ -80,20 +80,32 @@ jobs:
             echo "⚠️ super-linter.log not found" > super-linter-errors.md
           fi
 
-      - name: 📝 Generate Step Summary
+      - name: 🧾 Generate Linter Pass/Fail Table
         if: always()
         run: |
-          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
+          LANGUAGES=("JavaScript" "Python" "JSON")
+          echo "### Super-Linter Validation Table" > super-linter-summary.md
+          echo "" >> super-linter-summary.md
+          echo "| Language | Result |" >> super-linter-summary.md
+          echo "|----------|--------|" >> super-linter-summary.md
+
+          for lang in "${LANGUAGES[@]}"; do
+            if grep -q "\[$lang\]" super-linter.log; then
+              echo "| $lang | ❌ Failed |" >> super-linter-summary.md
+            else
+              echo "| $lang | ✅ Passed |" >> super-linter-summary.md
+            fi
+          done
+
+      - name: 📝 Add Linter Summary to Step Summary
+        if: always()
+        run: |
+          echo "### Super-Linter Errors" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```markdown' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat super-linter-summary.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Errors
         if: always()
