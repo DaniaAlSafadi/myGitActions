@@ -37,13 +37,13 @@ jobs:
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
 
+      # Extract only [ERROR] logs into super-linter-errors.md
       - name: 📌 Save Linter Errors to Markdown file ([ERROR] only)
         if: always()
         run: |
-          MD_FILE="super-linter-errors.md"
+          ERRORS_FILE="super-linter-errors.md"
           if [ -f super-linter.log ]; then
             awk '
-              # Only process lines with [ERROR]
               /\[ERROR\]/ {
                 if ($0 ~ /Command output:/) {
                   print
@@ -55,33 +55,44 @@ jobs:
                   next
                 }
               }
-              # Capture lines after Command output until double dashed lines
               inerror {
                 if ($0 ~ /\[ERROR\]/ && $0 !~ /Command output:/) {
                   print
                   inerror=0
                   next
                 }
-                # Only print lines that do not contain [DEBUG] or [INFO]
-                if ($0 !~ /\[DEBUG\]|\[INFO\]/) print
+                if ($0 !~ /\[DEBUG\]/) print
                 if ($0 ~ /^------$/) {
                   dash_count++
                   if (dash_count == 2) inerror=0
                 }
               }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > $MD_FILE
-            if [ ! -s $MD_FILE ]; then
-              echo "✅ No lint errors found" > $MD_FILE
+            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > $ERRORS_FILE
+            if [ ! -s $ERRORS_FILE ]; then
+              echo "✅ No lint errors found" > $ERRORS_FILE
             fi
           else
-            echo "⚠️ super-linter.log not found" > $MD_FILE
+            echo "⚠️ super-linter.log not found" > $ERRORS_FILE
           fi
+
+      # Save full logs (INFO + WARN + ERROR + FATAL) into super-linter-logs.md
+      - name: 📌 Save Full Logs to Markdown file
+        if: always()
+        run: |
+          LOGS_FILE="super-linter-logs.md"
+          if [ -f super-linter.log ]; then
+            sed -r "s/\x1B\[[0-9;]*[mK]//g" super-linter.log > $LOGS_FILE
+          else
+            echo "⚠️ super-linter.log not found" > $LOGS_FILE
+          fi
+
       - name: 📝 Generate Step Summary
         if: always()
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # 1️⃣ Code Style Check Summary first
+
+          # Code Style Check Summary
           echo "#### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
@@ -89,7 +100,7 @@ jobs:
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # 2️⃣ Then the summary table
+
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|-----------------| " >> "$GITHUB_STEP_SUMMARY"
           check_lang() {
@@ -110,19 +121,20 @@ jobs:
           check_lang "JSON"
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # 3️⃣ Extracted lint errors
-          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
-            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          fi
+
+          # Extracted lint errors
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - name: 📦 Upload Super-Linter Errors
+
+      # Upload both files into one artifact folder
+      - name: 📦 Upload Super-Linter Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-errors
-          path: super-linter-errors.md
+          name: Super-linter-report
+          path: |
+            super-linter-errors.md
+            super-linter-logs.md
           if-no-files-found: ignore
