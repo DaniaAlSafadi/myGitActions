@@ -81,6 +81,13 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          
+          # Add warning line if errors exist
+          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
+            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
           # Print results table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
@@ -93,20 +100,17 @@ jobs:
               PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
             esac
             if grep -qE "$pattern" super-linter.log; then
-              echo "| ${lang} | ❌ Fail |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| ${lang} | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "| ${lang} | ✅ Pass |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
             fi
           }
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+
           # Extracted lint errors
-          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
-            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          fi
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
@@ -121,32 +125,28 @@ jobs:
           if-no-files-found: ignore
 
   detect:
-    name: detect
+    name: Detect
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🕵️‍♀️ Scan for Debug Keywords
+      - name: 🕵️‍♀️ Scan for console.log or print
         run: |
-          echo "🔍 Detect 'console.log' or 'print' statements..."
-
-          # Add UI description
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Detect 'console.log' or 'print'" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks for debug statements in:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript (console.log)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python (print)" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
           FILE_PATHS=$(find . -type f \( -name "*.js" -o -name "*.py" \))
           hit_flag=0
           js_flag=0
           py_flag=0
           mkdir -p keyword-scan-output
           REPORT_FILE=keyword-scan-output/keyword-scan-report.md
-          echo "## 🔎 Keyword Scan Report" > "$REPORT_FILE"
+          
+          # Add description
+          echo "#### Detect console.log or print" > "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          echo "This workflow checks for debug statements in:" >> "$REPORT_FILE"
+          echo "- JavaScript (console.log)" >> "$REPORT_FILE"
+          echo "- Python (print)" >> "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
 
           format_path() {
             clean_path="${1#./}"
@@ -189,15 +189,14 @@ jobs:
             fi
           done <<< "$FILE_PATHS"
 
-          # Display red ❌ or green ✅ in Step Summary
+          # Add final status mark
           if [[ "$hit_flag" -eq 1 ]]; then
-            echo "| Debug Keyword Check | ❌ Detected |" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo -e "\n❌ Detected disallowed keywords." >> "$REPORT_FILE"
             cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           else
-            echo "| Debug Keyword Check | ✅ None Found |" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "✅ No disallowed keywords found." >> "$REPORT_FILE"
+            echo -e "\n✅ No disallowed keywords found." >> "$REPORT_FILE"
+            cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: 📦 Upload keyword scan report
