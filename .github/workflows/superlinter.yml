@@ -37,41 +37,55 @@ jobs:
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
 
-      - name: 📌 Save Linter Errors to Markdown file
+      - name: 🧾 Generate Linter Pass/Fail Table
+        if: always()
+        run: |
+          LANGUAGES=("JavaScript" "Python" "JSON")
+          echo "### Super-Linter Summary" > super-linter-summary.md
+          echo "" >> super-linter-summary.md
+          echo "This workflow checks code formatting for:" >> super-linter-summary.md
+          echo "" >> super-linter-summary.md
+          for lang in "${LANGUAGES[@]}"; do
+            echo "- $lang" >> super-linter-summary.md
+          done
+          echo "" >> super-linter-summary.md
+          echo "#### Validation Table" >> super-linter-summary.md
+          echo "" >> super-linter-summary.md
+          echo "| Language | Result |" >> super-linter-summary.md
+          echo "|----------|--------|" >> super-linter-summary.md
+
+          for lang in "${LANGUAGES[@]}"; do
+            if grep -q "\[ERROR\].*$lang" super-linter.log; then
+              echo "| $lang | ❌ Failed |" >> super-linter-summary.md
+            else
+              echo "| $lang | ✅ Passed |" >> super-linter-summary.md
+            fi
+          done
+
+      - name: 📌 Save Linter Errors to Markdown file (clean format)
         if: always()
         run: |
           if [ -f super-linter.log ]; then
             awk '
               /\[ERROR\]/ {
-                if ($0 ~ /Command output:/) {
-                  print; 
-                  inerror=1; 
-                  dash_count=0; 
-                  next
-                } else {
-                  print;
-                  next
-                }
+                print $0
+                inerror=1
+                dash_count=0
+                next
               }
               inerror {
-                if ($0 ~ /\[ERROR\]/) {
-                  if ($0 ~ /Command output:/) {
-                    print;
-                    dash_count=0;
-                    next
-                  } else {
-                    print;
-                    inerror=0;
-                    next
-                  }
+                if ($0 ~ /\[ERROR\]/ && $0 !~ /Command output:/) {
+                  inerror=0
                 }
-                print
-                if ($0 ~ /^------$/) {
-                  dash_count++
-                  if (dash_count == 2) inerror=0
+                if ($0 !~ /\[DEBUG\]/ && $0 !~ /\[ERROR\]/) {
+                  if (dash_count==0) { print "------"; dash_count=1 }
+                  print $0
                 }
               }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
+              END {
+                if (dash_count==1) print "------"
+              }
+            ' super-linter.log > super-linter-errors.md
 
             if [ ! -s super-linter-errors.md ]; then
               echo "✅ No lint errors found" > super-linter-errors.md
@@ -80,32 +94,14 @@ jobs:
             echo "⚠️ super-linter.log not found" > super-linter-errors.md
           fi
 
-      - name: 🧾 Generate Linter Pass/Fail Table
+      - name: 📝 Add Linter Summary and Errors to Step Summary
         if: always()
         run: |
-          LANGUAGES=("JavaScript" "Python" "JSON")
-          echo "### Super-Linter Validation Table" > super-linter-summary.md
-          echo "" >> super-linter-summary.md
-          echo "| Language | Result |" >> super-linter-summary.md
-          echo "|----------|--------|" >> super-linter-summary.md
-
-          for lang in "${LANGUAGES[@]}"; do
-            if grep -q "\[$lang\]" super-linter.log; then
-              echo "| $lang | ❌ Failed |" >> super-linter-summary.md
-            else
-              echo "| $lang | ✅ Passed |" >> super-linter-summary.md
-            fi
-          done
-
-      - name: 📝 Add Linter Summary to Step Summary
-        if: always()
-        run: |
-          echo "### Super-Linter Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-summary.md >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Errors
         if: always()
