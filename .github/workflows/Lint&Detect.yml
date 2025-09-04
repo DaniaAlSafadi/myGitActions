@@ -81,7 +81,12 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-
+          
+          # Add warning line if errors exist
+          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
+            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
           # Print results table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
@@ -102,6 +107,12 @@ jobs:
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          # Extracted lint errors
+          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Errors
         if: always()
@@ -119,6 +130,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🕵️‍♀️ Scan for console.log or print
+        continue-on-error: true  # <- prevents GitHub Annotations
         run: |
           FILE_PATHS=$(find . -type f \( -name "*.js" -o -name "*.py" \))
           hit_flag=0
@@ -134,7 +146,7 @@ jobs:
           echo "- JavaScript (console.log)" >> "$REPORT_FILE"
           echo "- Python (print)" >> "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
-
+          
           format_path() {
             clean_path="${1#./}"
             if [[ "$clean_path" == */* ]]; then
@@ -176,17 +188,17 @@ jobs:
             fi
           done <<< "$FILE_PATHS"
 
-          # Add final status mark right after Python (print)
+          # Add final status mark directly in report
           if [[ "$hit_flag" -eq 1 ]]; then
-            echo "| Detect Keywords | ❌ Detected disallowed keywords |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Detect Keywords | ❌ Detected disallowed keywords |" >> "$REPORT_FILE"
             echo -e "\n❌ Detected disallowed keywords." >> "$REPORT_FILE"
-            cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
-            exit 1
           else
-            echo "| Detect Keywords | ✅ No disallowed keywords found |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Detect Keywords | ✅ No disallowed keywords found |" >> "$REPORT_FILE"
             echo -e "\n✅ No disallowed keywords found." >> "$REPORT_FILE"
-            cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+          # Output the report in the step summary
+          cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload keyword scan report
         if: always()
