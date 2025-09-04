@@ -40,45 +40,39 @@ jobs:
       - name: 📌 Save Linter Errors to Markdown file
         if: always()
         run: |
-          # Create the summary table function
-          create_summary_table() {
-            echo "# Super-Linter Summary" > super-linter-errors.md
-            echo "" >> super-linter-errors.md
-            echo "| Language | Validation Result |" >> super-linter-errors.md
-            echo "|----------|-------------------|" >> super-linter-errors.md
-            
-            check_lang() {
-              local lang="$1"
-              local display_name="$2"
-              local pattern=""
-              case "$lang" in
-                JAVASCRIPT_STANDARD) pattern="\[ERROR\].*Found errors in \[standard\]";;
-                JSON) pattern="\[ERROR\].*Found errors in \[json\]";;
-                PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
-              esac
-              if [ -f super-linter.log ] && grep -qE "$pattern" super-linter.log; then
-                echo "| ${display_name} | ❌ Fail |" >> super-linter-errors.md
-              else
-                echo "| ${display_name} | ✅ Pass |" >> super-linter-errors.md
-              fi
-            }
-            
-            # Check each language
-            check_lang "JAVASCRIPT_STANDARD" "JavaScript (Standard)"
-            check_lang "JSON" "JSON"
-            check_lang "PYTHON" "Python"
-            echo "" >> super-linter-errors.md
+          # ✅ ADDED: Create summary table at top of .md
+          echo "### Super-Linter Summary" > super-linter-errors.md
+          echo "" >> super-linter-errors.md
+          echo "| Language | Validation Result |" >> super-linter-errors.md
+          echo "|----------|-----------------| " >> super-linter-errors.md
+
+          check_lang_md() {  # ✅ ADDED
+            local lang="$1"
+            local pattern=""
+            case "$lang" in
+              JAVASCRIPT_STANDARD) pattern="\[ERROR\].*Found errors in \[standard\]";;
+              JSON) pattern="\[ERROR\].*Found errors in \[json\]";;
+              PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
+            esac
+            if [ -f super-linter.log ] && grep -qE "$pattern" super-linter.log; then
+              echo "| ${lang} | ❌ Fail |" >> super-linter-errors.md
+            else
+              echo "| ${lang} | ✅ Pass |" >> super-linter-errors.md
+            fi
           }
-          
-          # Create the summary table first
-          create_summary_table
-          
+
+          # ✅ ADDED: Generate table for all languages
+          check_lang_md "JAVASCRIPT_STANDARD"
+          check_lang_md "JSON"
+          check_lang_md "PYTHON"
+          echo "" >> super-linter-errors.md
+
           # Then add the detailed errors
           if [ -f super-linter.log ]; then
             if grep -q "\[ERROR\]" super-linter.log; then
-              echo "## Extracted Lint Errors" >> super-linter-errors.md
+              echo "#### Extracted Lint Errors" >> super-linter-errors.md
               echo "" >> super-linter-errors.md
-              echo "\`\`\`" >> super-linter-errors.md
+              echo '```' >> super-linter-errors.md
               
               awk '
                 /\[ERROR\]/ {
@@ -112,7 +106,7 @@ jobs:
                 }
               ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" >> super-linter-errors.md
               
-              echo "\`\`\`" >> super-linter-errors.md
+              echo '```' >> super-linter-errors.md
             else
               echo "## Result" >> super-linter-errors.md
               echo "" >> super-linter-errors.md
@@ -132,6 +126,7 @@ jobs:
           # Add the summary table header
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|-----------------| " >> "$GITHUB_STEP_SUMMARY"
+
           check_lang() {
             local lang="$1"
             local pattern=""
@@ -151,12 +146,12 @@ jobs:
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # Add extracted lint errors directly in UI instead of artifact message
+          # ✅ CHANGED: Display actual lint errors in UI instead of artifact message
           if [ -f super-linter-errors.md ]; then
-            if grep -q "## Extracted Lint Errors" super-linter-errors.md; then
+            if grep -q "#### Extracted Lint Errors" super-linter-errors.md; then
               echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
               echo '```' >> "$GITHUB_STEP_SUMMARY"
-              awk '/## Extracted Lint Errors/{flag=1; next} /^```/{flag=0} flag || /^## Result/{flag=1; next} flag' super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
+              awk '/#### Extracted Lint Errors/{flag=1; next} /^```/{flag=0} flag' super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
               echo '```' >> "$GITHUB_STEP_SUMMARY"
             else
               echo "✅ No lint errors found! All code formatting checks passed." >> "$GITHUB_STEP_SUMMARY"
