@@ -14,9 +14,9 @@ permissions:
 jobs:
   super-lint:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -29,42 +29,61 @@ jobs:
       - name: 🧹 Run Super-Linter
         uses: github/super-linter@v5
         env:
-          VALIDATE_ALL_CODEBASE: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_JAVASCRIPT_STANDARD: true
+          VALIDATE_PYTHON: true
           VALIDATE_JSON: true
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
 
-      - name: 📌 Save Linter Errors to Markdown
+      - name: 📌 Save Linter Errors to Markdown file
         if: always()
         run: |
           if [ -f super-linter.log ]; then
-            # Extract all [ERROR] lines and their Command output blocks
             awk '
               /\[ERROR\]/ {
-                print; inerror=0
-                if ($0 ~ /Command output:/) inerror=1; next
+                if ($0 ~ /Command output:/) {
+                  print; 
+                  inerror=1; 
+                  dash_count=0; 
+                  next
+                } else {
+                  print;
+                  next
+                }
               }
               inerror {
+                if ($0 ~ /\[ERROR\]/) {
+                  if ($0 ~ /Command output:/) {
+                    print;
+                    dash_count=0;
+                    next
+                  } else {
+                    print;
+                    inerror=0;
+                    next
+                  }
+                }
                 print
-                if ($0 ~ /^------$/) inerror=0
+                if ($0 ~ /^------$/) {
+                  dash_count++
+                  if (dash_count == 2) inerror=0
+                }
               }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
-
             if [ ! -s super-linter-errors.md ]; then
               echo "✅ No lint errors found" > super-linter-errors.md
             fi
           else
             echo "⚠️ super-linter.log not found" > super-linter-errors.md
           fi
-
       - name: 📝 Generate Step Summary
         if: always()
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript (Standard)" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
@@ -73,10 +92,10 @@ jobs:
           echo '```markdown' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-
       - name: 📦 Upload Super-Linter Errors
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-errors
           path: super-linter-errors.md
+          if-no-files-found: ignore
