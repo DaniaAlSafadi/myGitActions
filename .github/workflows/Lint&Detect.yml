@@ -68,7 +68,6 @@ jobs:
             fi
           else
             echo "⚠️ super-linter.log not found" > $MD_FILE
-          fi
 
       - name: 📝 Generate Step Summary
         if: always()
@@ -82,7 +81,13 @@ jobs:
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # Print results table
+          # ✅ Print message about lint errors if any exist
+          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
+            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # 2️⃣ Summary table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
           check_lang() {
@@ -104,7 +109,7 @@ jobs:
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # Extracted lint errors
+          # 3️⃣ Extracted lint errors
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
