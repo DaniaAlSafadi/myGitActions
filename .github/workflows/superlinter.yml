@@ -1,16 +1,13 @@
 name: Super-Linter
-
 on:
   push:
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
   checks: write
   pull-requests: write
   security-events: write  # Required for SARIF upload
-
 jobs:
   super-lint:
     runs-on: ubuntu-latest
@@ -19,13 +16,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: 📁 Print repo structure
         run: tree -L 3 || echo "tree not installed"
-
       - name: 📄 List all checked out files
         run: find . -type f
-
       - name: 🧹 Run Super-Linter
         uses: github/super-linter@v5
         env:
@@ -36,7 +30,6 @@ jobs:
           CREATE_LOG_FILE: true
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
-
       - name: 📌 Save Linter Errors to Markdown file
         if: always()
         run: |
@@ -44,9 +37,9 @@ jobs:
             awk '
               /\[ERROR\]/ {
                 if ($0 ~ /Command output:/) {
-                  print; 
-                  inerror=1; 
-                  dash_count=0; 
+                  print;
+                  inerror=1;
+                  dash_count=0;
                   next
                 } else {
                   print;
@@ -72,6 +65,7 @@ jobs:
                 }
               }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
+            
             if [ ! -s super-linter-errors.md ]; then
               echo "✅ No lint errors found" > super-linter-errors.md
             fi
@@ -83,13 +77,49 @@ jobs:
         run: |
           echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          
+          # Add the summary table
+          echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------------------|" >> "$GITHUB_STEP_SUMMARY"
+          
+          # Check JavaScript Standard
+          if grep -q "ERRORS FOUND in JAVASCRIPT_STANDARD" super-linter.log 2>/dev/null; then
+            echo "| JAVASCRIPT_STANDARD | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| JAVASCRIPT_STANDARD | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
+          # Check JSON
+          if grep -q "ERRORS FOUND in JSON" super-linter.log 2>/dev/null; then
+            echo "| JSON | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| JSON | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
+          # Check Python
+          if grep -q "ERRORS FOUND in PYTHON" super-linter.log 2>/dev/null; then
+            echo "| PYTHON | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| PYTHON | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          
+          # Add detection message if errors found
+          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
+            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
+          echo "#### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "- Python" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```markdown' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
       - name: 📦 Upload Super-Linter Errors
