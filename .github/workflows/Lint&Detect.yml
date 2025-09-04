@@ -81,12 +81,6 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          
-          # Add warning line if errors exist
-          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
-            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          fi
 
           # Print results table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
@@ -108,13 +102,6 @@ jobs:
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          # Extracted lint errors
-          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: 📦 Upload Super-Linter Errors
         if: always()
@@ -189,12 +176,14 @@ jobs:
             fi
           done <<< "$FILE_PATHS"
 
-          # Add final status mark
+          # Add final status mark right after Python (print)
           if [[ "$hit_flag" -eq 1 ]]; then
+            echo "| Detect Keywords | ❌ Detected disallowed keywords |" >> "$GITHUB_STEP_SUMMARY"
             echo -e "\n❌ Detected disallowed keywords." >> "$REPORT_FILE"
             cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           else
+            echo "| Detect Keywords | ✅ No disallowed keywords found |" >> "$GITHUB_STEP_SUMMARY"
             echo -e "\n✅ No disallowed keywords found." >> "$REPORT_FILE"
             cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           fi
