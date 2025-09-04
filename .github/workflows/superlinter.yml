@@ -37,17 +37,16 @@ jobs:
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
 
-      - name: 📌 Save Linter Errors to Markdown file ([ERROR] only)
+      - name: 📌 Save Linter Errors to Markdown file (clean)
         if: always()
         run: |
           MD_FILE="super-linter-errors.md"
 
           if [ -f super-linter.log ]; then
             awk '
-              # Only process lines with [ERROR]
+              # Only lines with [ERROR]
               /\[ERROR\]/ {
                 if ($0 ~ /Command output:/) {
-                  print
                   inerror=1
                   dash_count=0
                   next
@@ -56,19 +55,17 @@ jobs:
                   next
                 }
               }
-              # Capture lines after Command output until double dashed lines
+
               inerror {
-                if ($0 ~ /\[ERROR\]/ && $0 !~ /Command output:/) {
-                  print
-                  inerror=0
-                  next
-                }
-                # Only print lines that do not contain [DEBUG] or [INFO]
-                if ($0 !~ /\[DEBUG\]|\[INFO\]/) print
+                # Stop after two dashed lines
                 if ($0 ~ /^------$/) {
                   dash_count++
                   if (dash_count == 2) inerror=0
+                  next
                 }
+
+                # Only print lines that are not [DEBUG] or [INFO]
+                if ($0 !~ /\[DEBUG\]|\[INFO\]/) print
               }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > $MD_FILE
 
