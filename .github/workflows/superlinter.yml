@@ -79,6 +79,7 @@ jobs:
           else
             echo "⚠️ super-linter.log not found" > super-linter-errors.md
           fi
+
       - name: 📝 Generate Step Summary
         if: always()
         run: |
@@ -87,25 +88,36 @@ jobs:
           # Add the summary table header
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|-----------------| " >> "$GITHUB_STEP_SUMMARY"
-          # Function to check a language
+
           check_lang() {
             local lang="$1"
-            if grep -q "ERRORS FOUND in ${lang}:\[.*\]" super-linter.log 2>/dev/null; then
+            local pattern=""
+            case "$lang" in
+              JAVASCRIPT_STANDARD) pattern="\[ERROR\].*Found errors in \[standard\]";;
+              JSON) pattern="\[ERROR\].*Found errors in \[json\]";;
+              PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
+            esac
+
+            if grep -qE "$pattern" super-linter.log; then
               echo "| ${lang} | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
             else
               echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
             fi
           }
+
           # Check each language
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
+
           echo "" >> "$GITHUB_STEP_SUMMARY"
+
           # Add detection message if errors found
           if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
+
           echo "#### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
@@ -117,6 +129,7 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: 📦 Upload Super-Linter Errors
         if: always()
         uses: actions/upload-artifact@v4
