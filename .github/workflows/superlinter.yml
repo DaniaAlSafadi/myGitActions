@@ -9,7 +9,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
-  security-events: write  # Required for SARIF upload
+  security-events: write
 
 jobs:
   super-lint:
@@ -37,56 +37,18 @@ jobs:
           LOG_LEVEL: VERBOSE
           NO_COLOR: true
 
-      - name: 📌 Save Linter Errors to Markdown file
+      - name: 📌 Generate Markdown with Table and Only [ERROR] Logs
         if: always()
         run: |
-          if [ -f super-linter.log ]; then
-            awk '
-              /\[ERROR\]/ {
-                if ($0 ~ /Command output:/) {
-                  print;
-                  inerror=1;
-                  dash_count=0;
-                  next
-                } else {
-                  print;
-                  next
-                }
-              }
-              inerror {
-                if ($0 ~ /\[ERROR\]/) {
-                  if ($0 ~ /Command output:/) {
-                    print;
-                    dash_count=0;
-                    next
-                  } else {
-                    print;
-                    inerror=0;
-                    next
-                  }
-                }
-                print
-                if ($0 ~ /^------$/) {
-                  dash_count++
-                  if (dash_count == 2) inerror=0
-                }
-              }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > super-linter-errors.md
-            
-            if [ ! -s super-linter-errors.md ]; then
-              echo "✅ No lint errors found" > super-linter-errors.md
-            fi
-          else
-            echo "⚠️ super-linter.log not found" > super-linter-errors.md
-          fi
-      - name: 📝 Generate Step Summary
-        if: always()
-        run: |
-          echo "### Super-Linter Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Add the summary table header
-          echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|-----------------| " >> "$GITHUB_STEP_SUMMARY"
+          MD_FILE="super-linter-errors.md"
+
+          # Start Markdown file with summary table
+          echo "### Super-Linter Summary" > $MD_FILE
+          echo "" >> $MD_FILE
+          echo "| Language | Validation result |" >> $MD_FILE
+          echo "|----------|-----------------| " >> $MD_FILE
+
+          # Function to check each language
           check_lang() {
             local lang="$1"
             local pattern=""
@@ -96,33 +58,66 @@ jobs:
               PYTHON) pattern="\[ERROR\].*Found errors in \[python\]";;
             esac
             if grep -qE "$pattern" super-linter.log; then
-              echo "| ${lang} | Fail ❌ |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| ${lang} | Fail ❌ |" >> $MD_FILE
             else
-              echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| ${lang} | Pass ✅ |" >> $MD_FILE
             fi
           }
-          # Check each language
+
+          # Check all languages
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Add detection message if errors found
-          if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
-            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> $MD_FILE
+
+          # Extract only [ERROR] logs
+          echo "#### Extracted Lint Errors" >> $MD_FILE
+          echo '```' >> $MD_FILE
+          if [ -f super-linter.log ]; then
+            awk '
+              # Only lines with [ERROR]
+              /\[ERROR\]/ {
+                if ($0 ~ /Command output:/) {
+                  print
+                  inerror=1
+                  dash_count=0
+                  next
+                } else {
+                  print
+                  next
+                }
+              }
+              # Capture lines after Command output until double dashes
+              inerror {
+                if ($0 ~ /\[ERROR\]/ && $0 !~ /Command output:/) {
+                  print
+                  inerror=0
+                  next
+                }
+                print
+                if ($0 ~ /^------$/) {
+                  dash_count++
+                  if (dash_count == 2) inerror=0
+                }
+              }
+            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g"
+          else
+            echo "⚠️ super-linter.log not found"
           fi
-          echo "#### Code Style Check Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow checks code formatting for:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
-          echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Python" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> $MD_FILE
+
+          # If no errors found, append success message without removing table
+          if ! grep -q "Fail ❌" $MD_FILE; then
+            echo "" >> $MD_FILE
+            echo "✅ No lint errors found" >> $MD_FILE
+          fi
+
+      - name: 📝 Update GitHub Step Summary
+        if: always()
+        run: |
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - name: 📦 Upload Super-Linter Errors
+
+      - name: 📦 Upload Super-Linter Markdown
         if: always()
         uses: actions/upload-artifact@v4
         with:
