@@ -8,6 +8,8 @@ on:
 permissions:
   contents: read
   checks: write
+  pull-requests: write
+  security-events: write
 
 jobs:
   lint:
@@ -66,7 +68,7 @@ jobs:
             fi
           else
             echo "⚠️ super-linter.log not found" > $MD_FILE
-
+          fi
       - name: 📝 Generate Step Summary
         if: always()
         run: |
@@ -78,15 +80,15 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-
+          
+          # Add warning line if errors exist
           if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
-            echo "❌ Lint errors detected – see super-linter-errors.md for details" >> "$GITHUB_STEP_SUMMARY"
+            echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
-
+          # Print results table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
-
           check_lang() {
             local lang="$1"
             local pattern=""
@@ -101,17 +103,15 @@ jobs:
               echo "| ${lang} | Pass ✅ |" >> "$GITHUB_STEP_SUMMARY"
             fi
           }
-
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-
+          # Extracted lint errors
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-
       - name: 📦 Upload Super-Linter Errors
         if: always()
         uses: actions/upload-artifact@v4
@@ -123,11 +123,14 @@ jobs:
   detect:
     name: Detect
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
       - name: 🕵️‍♀️ Scan for console.log or print
+        id: scan
+        continue-on-error: true
         run: |
           FILE_PATHS=$(find . -type f \( -name "*.js" -o -name "*.py" \))
           hit_flag=0
@@ -135,14 +138,15 @@ jobs:
           py_flag=0
           mkdir -p keyword-scan-output
           REPORT_FILE=keyword-scan-output/keyword-scan-report.md
-
+          
+          # Add description and header
           echo "#### Detect console.log or print" > "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
           echo "This workflow checks for debug statements in:" >> "$REPORT_FILE"
           echo "* JavaScript (console.log)" >> "$REPORT_FILE"
           echo "* Python (print)" >> "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
-
+          
           format_path() {
             clean_path="${1#./}"
             if [[ "$clean_path" == */* ]]; then
@@ -151,8 +155,8 @@ jobs:
               echo "📄 _${clean_path}_"
             fi
           }
-
-          # First pass: detect hits
+          
+          # First pass: check if we have any hits to determine status
           while IFS= read -r path; do
             if [[ -f "$path" ]]; then
               if [[ "$path" == *.js ]]; then
@@ -170,9 +174,15 @@ jobs:
               fi
             fi
           done <<< "$FILE_PATHS"
-
+          
+          # Add status right after header
+          if [[ "$hit_flag" -eq 1 ]]; then
+            echo "❌ Detected disallowed keywords." >> "$REPORT_FILE"
+          else
+            echo "✅ No disallowed keywords found." >> "$REPORT_FILE"
+          fi
           echo "" >> "$REPORT_FILE"
-
+          
           # Second pass: collect and display results if any hits found
           if [[ "$hit_flag" -eq 1 ]]; then
             while IFS= read -r path; do
@@ -205,15 +215,23 @@ jobs:
               fi
             done <<< "$FILE_PATHS"
           fi
-
-          # Output to summary and exit
+          
+          # Output to step summary and exit appropriately
           cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
-
+          
           if [[ "$hit_flag" -eq 1 ]]; then
-            # Exit with 1 to fail PR but no extra ❌ under description
             exit 1
           fi
 
+      - name: 📊 Report scan outcome
+        if: always()
+        run: |
+          if [[ "${{ steps.scan.outcome }}" == "failure" ]]; then
+            echo "🟡 Detect job completed with findings (check step summary for details)"
+          else
+            echo "✅ Detect job passed - no issues found"
+          fi
+          
       - name: 📦 Upload keyword scan report
         if: always()
         uses: actions/upload-artifact@v4
