@@ -217,6 +217,7 @@ jobs:
           cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           
           if [[ "$hit_flag" -eq 1 ]]; then
+            echo "::error title=❌ Detected disallowed keywords.::"
             exit 1
           fi
           
