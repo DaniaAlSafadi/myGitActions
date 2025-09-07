@@ -116,4 +116,107 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linte
+          name: super-linter-errors
+          path: super-linter-errors.md
+          if-no-files-found: ignore
+
+  detect:
+    name: Detect
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🕵️‍♀️ Scan for console.log or print
+        run: |
+          FILE_PATHS=$(find . -type f \( -name "*.js" -o -name "*.py" \))
+          hit_flag=0
+          js_flag=0
+          py_flag=0
+          mkdir -p keyword-scan-output
+          REPORT_FILE=keyword-scan-output/keyword-scan-report.md
+
+          echo "#### Detect console.log or print" > "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          echo "This workflow checks for debug statements in:" >> "$REPORT_FILE"
+          echo "* JavaScript (console.log)" >> "$REPORT_FILE"
+          echo "* Python (print)" >> "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+
+          format_path() {
+            clean_path="${1#./}"
+            if [[ "$clean_path" == */* ]]; then
+              echo "🗂️ _${clean_path}_"
+            else
+              echo "📄 _${clean_path}_"
+            fi
+          }
+
+          # First pass: detect hits
+          while IFS= read -r path; do
+            if [[ -f "$path" ]]; then
+              if [[ "$path" == *.js ]]; then
+                results=$(grep -Hn "console\.log" "$path" || true)
+                if [[ -n "$results" ]]; then
+                  hit_flag=1
+                  break
+                fi
+              elif [[ "$path" == *.py ]]; then
+                results=$(grep -Hn "print" "$path" || true)
+                if [[ -n "$results" ]]; then
+                  hit_flag=1
+                  break
+                fi
+              fi
+            fi
+          done <<< "$FILE_PATHS"
+
+          echo "" >> "$REPORT_FILE"
+
+          # Second pass: collect and display results if any hits found
+          if [[ "$hit_flag" -eq 1 ]]; then
+            while IFS= read -r path; do
+              if [[ -f "$path" ]]; then
+                if [[ "$path" == *.js ]]; then
+                  results=$(grep -Hn "console\.log" "$path" || true)
+                  if [[ -n "$results" ]]; then
+                    if [[ "$js_flag" -eq 0 ]]; then
+                      echo "**console.log found in:**" >> "$REPORT_FILE"
+                      js_flag=1
+                    fi
+                    format_path "$path" >> "$REPORT_FILE"
+                    echo '```js' >> "$REPORT_FILE"
+                    echo "$results" | sed -E "s|$path:||" >> "$REPORT_FILE"
+                    echo '```' >> "$REPORT_FILE"
+                  fi
+                elif [[ "$path" == *.py ]]; then
+                  results=$(grep -Hn "print" "$path" || true)
+                  if [[ -n "$results" ]]; then
+                    if [[ "$py_flag" -eq 0 ]]; then
+                      echo -e "\n**print found in:**" >> "$REPORT_FILE"
+                      py_flag=1
+                    fi
+                    format_path "$path" >> "$REPORT_FILE"
+                    echo '```py' >> "$REPORT_FILE"
+                    echo "$results" | sed -E "s|$path:||" >> "$REPORT_FILE"
+                    echo '```' >> "$REPORT_FILE"
+                  fi
+                fi
+              fi
+            done <<< "$FILE_PATHS"
+          fi
+
+          # Output to summary and exit
+          cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$hit_flag" -eq 1 ]]; then
+            # Exit with 1 to fail PR but no extra ❌ under description
+            exit 1
+          fi
+
+      - name: 📦 Upload keyword scan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: keyword-scan-report
+          path: keyword-scan-output/
