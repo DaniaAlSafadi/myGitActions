@@ -153,35 +153,20 @@ jobs:
             fi
           }
           
-          # Collect all findings for annotations
-          declare -a warning_files=()
-          declare -a js_findings=()
-          declare -a py_findings=()
-          
-          # First pass: check if we have any hits and collect detailed findings
+          # First pass: check if we have any hits to determine status
           while IFS= read -r path; do
             if [[ -f "$path" ]]; then
               if [[ "$path" == *.js ]]; then
                 results=$(grep -Hn "console\.log" "$path" || true)
                 if [[ -n "$results" ]]; then
                   hit_flag=1
-                  warning_files+=("$path")
-                  # Create warning annotation for each line
-                  while IFS= read -r line; do
-                    line_num=$(echo "$line" | cut -d: -f1)
-                    echo "::warning file=${path#./},line=${line_num},title=Debug Statement::Found console.log statement"
-                  done <<< "$results"
+                  break
                 fi
               elif [[ "$path" == *.py ]]; then
                 results=$(grep -Hn "print" "$path" || true)
                 if [[ -n "$results" ]]; then
                   hit_flag=1
-                  warning_files+=("$path")
-                  # Create warning annotation for each line
-                  while IFS= read -r line; do
-                    line_num=$(echo "$line" | cut -d: -f1)
-                    echo "::warning file=${path#./},line=${line_num},title=Debug Statement::Found print statement"
-                  done <<< "$results"
+                  break
                 fi
               fi
             fi
@@ -189,7 +174,7 @@ jobs:
           
           # Add status right after header
           if [[ "$hit_flag" -eq 1 ]]; then
-            echo "⚠️ Detected disallowed keywords (see warnings above)." >> "$REPORT_FILE"
+            echo "❌ Detected disallowed keywords." >> "$REPORT_FILE"
           else
             echo "✅ No disallowed keywords found." >> "$REPORT_FILE"
           fi
@@ -228,14 +213,11 @@ jobs:
             done <<< "$FILE_PATHS"
           fi
           
-          # Output to step summary - but don't fail the job
+          # Output to step summary and exit appropriately
           cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           
-          # Success regardless - warnings are shown as annotations
           if [[ "$hit_flag" -eq 1 ]]; then
-            echo "⚠️ Scan completed with warnings - see annotations in Files Changed tab"
-          else
-            echo "✅ Scan completed successfully - no debug statements found"
+            exit 1
           fi
           
       - name: 📦 Upload keyword scan report
@@ -244,4 +226,3 @@ jobs:
         with:
           name: keyword-scan-report
           path: keyword-scan-output/
-
