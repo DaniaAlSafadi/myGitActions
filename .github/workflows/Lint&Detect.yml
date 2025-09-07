@@ -123,14 +123,11 @@ jobs:
   detect:
     name: Detect
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
       - name: 🕵️‍♀️ Scan for console.log or print
-        id: scan
-        continue-on-error: true
         run: |
           FILE_PATHS=$(find . -type f \( -name "*.js" -o -name "*.py" \))
           hit_flag=0
@@ -156,20 +153,35 @@ jobs:
             fi
           }
           
-          # First pass: check if we have any hits to determine status
+          # Collect all findings for annotations
+          declare -a warning_files=()
+          declare -a js_findings=()
+          declare -a py_findings=()
+          
+          # First pass: check if we have any hits and collect detailed findings
           while IFS= read -r path; do
             if [[ -f "$path" ]]; then
               if [[ "$path" == *.js ]]; then
                 results=$(grep -Hn "console\.log" "$path" || true)
                 if [[ -n "$results" ]]; then
                   hit_flag=1
-                  break
+                  warning_files+=("$path")
+                  # Create warning annotation for each line
+                  while IFS= read -r line; do
+                    line_num=$(echo "$line" | cut -d: -f1)
+                    echo "::warning file=${path#./},line=${line_num},title=Debug Statement::Found console.log statement"
+                  done <<< "$results"
                 fi
               elif [[ "$path" == *.py ]]; then
                 results=$(grep -Hn "print" "$path" || true)
                 if [[ -n "$results" ]]; then
                   hit_flag=1
-                  break
+                  warning_files+=("$path")
+                  # Create warning annotation for each line
+                  while IFS= read -r line; do
+                    line_num=$(echo "$line" | cut -d: -f1)
+                    echo "::warning file=${path#./},line=${line_num},title=Debug Statement::Found print statement"
+                  done <<< "$results"
                 fi
               fi
             fi
@@ -177,7 +189,7 @@ jobs:
           
           # Add status right after header
           if [[ "$hit_flag" -eq 1 ]]; then
-            echo "❌ Detected disallowed keywords." >> "$REPORT_FILE"
+            echo "⚠️ Detected disallowed keywords (see warnings above)." >> "$REPORT_FILE"
           else
             echo "✅ No disallowed keywords found." >> "$REPORT_FILE"
           fi
@@ -216,20 +228,14 @@ jobs:
             done <<< "$FILE_PATHS"
           fi
           
-          # Output to step summary and exit appropriately
+          # Output to step summary - but don't fail the job
           cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           
+          # Success regardless - warnings are shown as annotations
           if [[ "$hit_flag" -eq 1 ]]; then
-            exit 1
-          fi
-
-      - name: 📊 Report scan outcome
-        if: always()
-        run: |
-          if [[ "${{ steps.scan.outcome }}" == "failure" ]]; then
-            echo "🟡 Detect job completed with findings (check step summary for details)"
+            echo "⚠️ Scan completed with warnings - see annotations in Files Changed tab"
           else
-            echo "✅ Detect job passed - no issues found"
+            echo "✅ Scan completed successfully - no debug statements found"
           fi
           
       - name: 📦 Upload keyword scan report
@@ -238,3 +244,4 @@ jobs:
         with:
           name: keyword-scan-report
           path: keyword-scan-output/
+
