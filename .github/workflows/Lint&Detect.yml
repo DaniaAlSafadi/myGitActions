@@ -7,6 +7,9 @@ on:
 
 permissions:
   contents: read
+  checks: write
+  pull-requests: write
+  security-events: write
 
 jobs:
   lint:
@@ -211,11 +214,11 @@ jobs:
           fi
           
           # Output to step summary and exit appropriately
-            cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
+          cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
           
-        #  if [[ "$hit_flag" -eq 1 ]]; then
-        #    exit 1
-        #  fi
+          if [[ "$hit_flag" -eq 1 ]]; then
+            exit 1
+          fi
           
       - name: 📦 Upload keyword scan report
         if: always()
