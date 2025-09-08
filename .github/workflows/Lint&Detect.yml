@@ -24,7 +24,7 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
-          LOG_LEVEL: VERBOSE
+          LOG_LEVEL: ERROR
           NO_COLOR: true
 
       - name: 📌 Save Linter Errors to Markdown file ([ERROR] only)
