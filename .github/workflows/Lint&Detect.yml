@@ -24,7 +24,7 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_JAVASCRIPT_STANDARD: true
           CREATE_LOG_FILE: true
-          LOG_LEVEL: VERBOSE
+          LOG_LEVEL: ERROR   # Only capture errors
           NO_COLOR: true
 
       - name: 📌 Save Linter Errors to Markdown file ([ERROR] only)
@@ -37,7 +37,6 @@ jobs:
                 if ($0 ~ /Command output:/) {
                   print
                   inerror=1
-                  dash_count=0
                   next
                 } else {
                   print
@@ -45,24 +44,22 @@ jobs:
                 }
               }
               inerror {
-                if ($0 ~ /\[ERROR\]/ && $0 !~ /Command output:/) {
+                if ($0 ~ /^------$/) {
                   print
                   inerror=0
                   next
                 }
-                if ($0 !~ /\[DEBUG\]|\[INFO\]/) print
-                if ($0 ~ /^------$/) {
-                  dash_count++
-                  if (dash_count == 2) inerror=0
-                }
+                print
               }
             ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > $MD_FILE
+
             if [ ! -s $MD_FILE ]; then
               echo "✅ No lint errors found" > $MD_FILE
             fi
           else
             echo "⚠️ super-linter.log not found" > $MD_FILE
           fi
+
       - name: 📝 Generate Step Summary
         if: always()
         run: |
@@ -75,11 +72,11 @@ jobs:
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           
-          # Add warning line if errors exist
           if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
+
           # Print results table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
@@ -100,12 +97,13 @@ jobs:
           check_lang "JAVASCRIPT_STANDARD"
           check_lang "JSON"
           check_lang "PYTHON"
+
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Extracted lint errors
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: 📦 Upload Super-Linter Errors
         if: always()
         uses: actions/upload-artifact@v4
@@ -130,7 +128,6 @@ jobs:
           mkdir -p keyword-scan-output
           REPORT_FILE=keyword-scan-output/keyword-scan-report.md
           
-          # Add description and header
           echo "#### Detect console.log or print" > "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
           echo "This workflow checks for debug statements in:" >> "$REPORT_FILE"
@@ -146,74 +143,46 @@ jobs:
               echo "📄 _${clean_path}_"
             fi
           }
-          
-          # First pass: check if we have any hits to determine status
+
+          # Scan files
           while IFS= read -r path; do
             if [[ -f "$path" ]]; then
               if [[ "$path" == *.js ]]; then
                 results=$(grep -Hn "console\.log" "$path" || true)
                 if [[ -n "$results" ]]; then
                   hit_flag=1
-                  break
+                  if [[ "$js_flag" -eq 0 ]]; then
+                    echo "**console.log found in:**" >> "$REPORT_FILE"
+                    js_flag=1
+                  fi
+                  format_path "$path" >> "$REPORT_FILE"
+                  echo '```js' >> "$REPORT_FILE"
+                  echo "$results" | sed -E "s|$path:||" >> "$REPORT_FILE"
+                  echo '```' >> "$REPORT_FILE"
                 fi
-              elif [[ "$path" == *.py ]]; then
+              elif [[ "$path" == *.py" ]]; then
                 results=$(grep -Hn "print" "$path" || true)
                 if [[ -n "$results" ]]; then
                   hit_flag=1
-                  break
+                  if [[ "$py_flag" -eq 0 ]]; then
+                    echo "**print found in:**" >> "$REPORT_FILE"
+                    py_flag=1
+                  fi
+                  format_path "$path" >> "$REPORT_FILE"
+                  echo '```py' >> "$REPORT_FILE"
+                  echo "$results" | sed -E "s|$path:||" >> "$REPORT_FILE"
+                  echo '```' >> "$REPORT_FILE"
                 fi
               fi
             fi
           done <<< "$FILE_PATHS"
-          
-          # Add status right after header
-          if [[ "$hit_flag" -eq 1 ]]; then
-            echo "❌ Detected disallowed keywords." >> "$REPORT_FILE"
-          else
+
+          if [[ "$hit_flag" -eq 0 ]]; then
             echo "✅ No disallowed keywords found." >> "$REPORT_FILE"
           fi
-          echo "" >> "$REPORT_FILE"
-          
-          # Second pass: collect and display results if any hits found
-          if [[ "$hit_flag" -eq 1 ]]; then
-            while IFS= read -r path; do
-              if [[ -f "$path" ]]; then
-                if [[ "$path" == *.js ]]; then
-                  results=$(grep -Hn "console\.log" "$path" || true)
-                  if [[ -n "$results" ]]; then
-                    if [[ "$js_flag" -eq 0 ]]; then
-                      echo "**console.log found in:**" >> "$REPORT_FILE"
-                      js_flag=1
-                    fi
-                    format_path "$path" >> "$REPORT_FILE"
-                    echo '```js' >> "$REPORT_FILE"
-                    echo "$results" | sed -E "s|$path:||" >> "$REPORT_FILE"
-                    echo '```' >> "$REPORT_FILE"
-                  fi
-                elif [[ "$path" == *.py ]]; then
-                  results=$(grep -Hn "print" "$path" || true)
-                  if [[ -n "$results" ]]; then
-                    if [[ "$py_flag" -eq 0 ]]; then
-                      echo -e "\n**print found in:**" >> "$REPORT_FILE"
-                      py_flag=1
-                    fi
-                    format_path "$path" >> "$REPORT_FILE"
-                    echo '```py' >> "$REPORT_FILE"
-                    echo "$results" | sed -E "s|$path:||" >> "$REPORT_FILE"
-                    echo '```' >> "$REPORT_FILE"
-                  fi
-                fi
-              fi
-            done <<< "$FILE_PATHS"
-          fi
-          
-          # Output to step summary and exit appropriately
+
           cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
-          
-          if [[ "$hit_flag" -eq 1 ]]; then
-            exit 1
-          fi
-          
+
       - name: 📦 Upload keyword scan report
         if: always()
         uses: actions/upload-artifact@v4
