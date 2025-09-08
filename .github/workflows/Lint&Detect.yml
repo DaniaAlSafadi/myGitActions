@@ -32,37 +32,14 @@ jobs:
         run: |
           MD_FILE="super-linter-errors.md"
           if [ -f super-linter.log ]; then
-            awk '
-              /\[ERROR\]/ {
-                if ($0 ~ /Command output:/) {
-                  print
-                  inerror=1
-                  dash_count=0
-                  next
-                } else {
-                  print
-                  next
-                }
-              }
-              inerror {
-                if ($0 ~ /\[ERROR\]/ && $0 !~ /Command output:/) {
-                  print
-                  inerror=0
-                  next
-                }
-                if ($0 !~ /\[DEBUG\]|\[INFO\]/) print
-                if ($0 ~ /^------$/) {
-                  dash_count++
-                  if (dash_count == 2) inerror=0
-                }
-              }
-            ' super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > $MD_FILE
+            grep "\[ERROR\]" super-linter.log | sed -r "s/\x1B\[[0-9;]*[mK]//g" > $MD_FILE
             if [ ! -s $MD_FILE ]; then
               echo "✅ No lint errors found" > $MD_FILE
             fi
           else
             echo "⚠️ super-linter.log not found" > $MD_FILE
           fi
+
       - name: 📝 Generate Step Summary
         if: always()
         run: |
@@ -74,12 +51,13 @@ jobs:
           echo "- JavaScript" >> "$GITHUB_STEP_SUMMARY"
           echo "- JSON" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          
+
           # Add warning line if errors exist
           if [ -s super-linter-errors.md ] && ! grep -q "No lint errors found" super-linter-errors.md; then
             echo "Super-linter detected linting errors" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
           fi
+
           # Print results table
           echo "| Language | Validation result |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|------------------|" >> "$GITHUB_STEP_SUMMARY"
@@ -101,11 +79,13 @@ jobs:
           check_lang "JSON"
           check_lang "PYTHON"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+
           # Extracted lint errors
           echo "#### Extracted Lint Errors" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat super-linter-errors.md >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: 📦 Upload Super-Linter Errors
         if: always()
         uses: actions/upload-artifact@v4
